@@ -550,6 +550,41 @@ if (!is_on_demo_host() && !$this->config->item('hide_test_mode_home') && !$this-
 </div>
 
 <?php if ($this->Employee->has_module_action_permission('reports', 'view_dashboard_stats', $this->Employee->get_logged_in_employee_info()->person_id)) { ?>
+<div class="row">
+<div class="col-md-6">
+<div class="panel panel-piluku">
+<div class="panel-heading"><h4>Pagos de hoy · <?php echo html_escape($current_location_name); ?></h4></div>
+<div class="panel-body">
+<div class="table-responsive">
+<table class="table table-striped">
+<thead><tr><th scope="col">Método de pago</th><th scope="col" class="text-right">Operaciones</th><th scope="col" class="text-right">Importe acumulado</th></tr></thead>
+<tbody>
+<?php foreach ($payment_breakdown['rows'] as $payment) { ?>
+<tr><th scope="row"><?php echo html_escape($payment['label']); ?></th><td class="text-right"><?php echo (int)$payment['operations']; ?></td><td class="text-right"><?php echo to_currency($payment['total']); ?></td></tr>
+<?php } ?>
+</tbody></table>
+</div>
+<div class="well" style="margin-bottom:10px;">
+<strong>Total de operaciones por método: <?php echo (int)$payment_breakdown['operations']; ?></strong><br>
+Total de pagos: <?php echo to_currency($payment_breakdown['total']); ?><br>
+Ventas únicas de hoy: <?php echo (int)$payment_breakdown['sales_count']; ?><br>
+<strong>Ventas acumuladas de hoy: <?php echo to_currency($payment_breakdown['sales_total']); ?></strong>
+</div>
+<p class="text-muted">Una venta combinada cuenta en cada método utilizado y una sola vez en ventas únicas. Incluye devoluciones; excluye ventas eliminadas y suspendidas.</p>
+</div></div>
+</div>
+<div class="col-md-6">
+<h4 class="text-center"><?php echo lang('reports_sales_summary_report'); ?> (<?php echo lang('reports_today'); ?>)</h4>
+<div class="chart">
+<canvas id="location_bar" width="400" height="320"></canvas>
+<div class="text-center chart-axis-label">
+<strong><?php echo lang('common_location'); ?>:</strong> <?php echo lang('reports_sales_generator_selectCondition1'); ?>
+&nbsp;|&nbsp;
+<strong><?php echo lang('reports_total'); ?>:</strong> <?php echo $this->config->item('currency_symbol') ? $this->config->item('currency_symbol') : '$'; ?>
+</div>
+</div>
+</div>
+</div>
 <div class="row ">
 <div class="col-md-12">
 <div class="panel">
@@ -582,30 +617,6 @@ if (!is_on_demo_host() && !$this->config->item('hide_test_mode_home') && !$this-
                     </div>
 						<?php } ?>
 				</div>
-</div>
-</div>
-</div>
-<div class="row">
-<div class="col-md-6">
-<h4 class="text-center"><?php echo lang('common_payments_summary_report'); ?> (<?php echo lang('reports_today'); ?>)</h4>
-<div class="chart">
-<canvas id="payment_pie" width="400" height="320"></canvas>
-<div class="text-center chart-axis-label">
-<strong><?php echo lang('common_payment_type'); ?>:</strong> <?php echo lang('common_method'); ?>
-&nbsp;|&nbsp;
-<strong><?php echo lang('common_unit_price'); ?>:</strong> <?php echo $this->config->item('currency_symbol') ? $this->config->item('currency_symbol') : '$'; ?>
-</div>
-</div>
-</div>
-<div class="col-md-6">
-<h4 class="text-center"><?php echo lang('reports_sales_summary_report'); ?> (<?php echo lang('reports_today'); ?>)</h4>
-<div class="chart">
-<canvas id="location_bar" width="400" height="320"></canvas>
-<div class="text-center chart-axis-label">
-<strong><?php echo lang('common_location'); ?>:</strong> <?php echo lang('reports_sales_generator_selectCondition1'); ?>
-&nbsp;|&nbsp;
-<strong><?php echo lang('reports_total'); ?>:</strong> <?php echo $this->config->item('currency_symbol') ? $this->config->item('currency_symbol') : '$'; ?>
-</div>
 </div>
 </div>
 </div>
@@ -723,31 +734,10 @@ responsive : true
 <?php } ?>
 
 
-var paymentBreakdown = <?php echo json_encode($payment_breakdown); ?>;
 var locationSales = <?php echo json_encode($location_sales); ?>;
 var currencySymbol = <?php echo json_encode($this->config->item('currency_symbol') ? $this->config->item('currency_symbol') : '$'); ?>;
 
-if (paymentBreakdown.labels && paymentBreakdown.labels.length)
-{
-var paymentColors = ["#5d9bfb", "#6bd098", "#fbc658", "#e74c3c", "#9b59b6", "#1abc9c", "#f39c12", "#34495e"];
-var pieData = [];
-for (var i = 0; i < paymentBreakdown.labels.length; i++)
-{
-pieData.push({
-value: paymentBreakdown.totals[i],
-color: paymentColors[i % paymentColors.length],
-highlight: paymentColors[i % paymentColors.length],
-label: paymentBreakdown.labels[i]
-});
-}
-
-var pieCtx = document.getElementById('payment_pie').getContext('2d');
-new Chart(pieCtx).Pie(pieData, {
-tooltipTemplate: "<%= label %>: " + ((currencySymbol && currencySymbol !== null) ? currencySymbol : '') + "<%= parseFloat(value).toFixed(2) %>"
-});
-}
-
-if (locationSales.labels && locationSales.labels.length)
+if (document.getElementById('location_bar') && locationSales.labels && locationSales.labels.length)
 {
 var locationData = {
 labels: locationSales.labels,
@@ -782,7 +772,7 @@ scaleLabel: "<%=value%> " + currencySymbol
 				var obj = jQuery.parseJSON(res);
 				if(obj.message)
 				{
-					$(".chart").html(obj.message);
+					$("#month .chart").html(obj.message);
 					return false;
 				}
 				
@@ -794,7 +784,7 @@ scaleLabel: "<%=value%> " + currencySymbol
 
 		function renderChart(label,data){
 
-		    $(".chart").html("").html('<canvas id="charts" width="400" height="400"></canvas>');
+		    $("#month .chart").html("").html('<canvas id="charts" width="400" height="400"></canvas>');
 		    var lineChartData = {
 		        labels : label,
 		        datasets : [
