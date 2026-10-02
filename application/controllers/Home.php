@@ -51,7 +51,9 @@ class Home extends Secure_area
                 $sales_total += $sale['total'];
             }
             $summary = array();
-            foreach (array('Efectivo', 'Transferencia', 'Tarjetas', 'Pagos con mercancía') as $label)
+            // Use the same configured options as a new sale, without reading the active cart.
+            $payment_options = $this->Sale->get_payment_options(new PHPPOSCartSale());
+            foreach ($payment_options as $label)
             {
                 $summary[$label] = array('label' => $label, 'operations' => 0, 'total' => 0);
             }
@@ -68,19 +70,29 @@ class Home extends Secure_area
                     foreach ($sale_payments as $payment)
                     {
                         if ((float)$payment['payment_amount'] == 0) continue;
-                        $type = trim(explode(':', $payment['payment_type'], 2)[0]);
-                        if (strpos($type, 'common_') === 0) $type = lang($type);
-                        $key = mb_strtolower($type, 'UTF-8');
-                        if ($type == lang('common_cash') || in_array($key, array('cash', 'efectivo')))
-                            $label = 'Efectivo';
-                        elseif ($type == lang('common_credit') || $type == lang('common_debit') || preg_match('/tarjeta|credit card|debit card/', $key))
-                            $label = 'Tarjetas';
-                        elseif (preg_match('/transfer|spei/', $key))
-                            $label = 'Transferencia';
-                        elseif (preg_match('/mercanc|merchandise/', $key))
-                            $label = 'Pagos con mercancía';
-                        else
-                            $label = $type;
+                        $label = $payment['payment_type'];
+                        // Custom names must remain exact, including colons and capitalization.
+                        if (!isset($summary[$label]))
+                        {
+                            $language_options = $this->Sale->get_payment_options_with_language_keys();
+                            foreach ($language_options as $name => $language_key)
+                            {
+                                if (strpos($language_key, 'common_') === 0 && $label === $language_key)
+                                {
+                                    $label = $name;
+                                    break;
+                                }
+                            }
+                            // Gift-card numbers identify the payment, not a separate method.
+                            foreach (array(lang('common_giftcard'), lang('common_integrated_gift_card')) as $giftcard_type)
+                            {
+                                if ($giftcard_type && strpos($label, $giftcard_type.':') === 0)
+                                {
+                                    $label = $giftcard_type;
+                                    break;
+                                }
+                            }
+                        }
                         if (!isset($summary[$label]))
                             $summary[$label] = array('label' => $label, 'operations' => 0, 'total' => 0);
                         $summary[$label]['total'] += $payment['payment_amount'];
