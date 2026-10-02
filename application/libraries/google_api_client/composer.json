@@ -1,0 +1,15 @@
+{
+    "require": {
+        "google/apiclient": "2.12.6",
+        "pear/mail_mime": "^1.10"
+    },
+    "scripts": {
+        "post-update-cmd": "Google\\Task\\Composer::cleanup"
+    },
+    "extra": {
+        "google/apiclient-services": [
+            "Gmail",
+            "Oauth2"
+        ]
+    }
+}
