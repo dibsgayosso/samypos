@@ -31,48 +31,72 @@ class Home extends Secure_area
 
 		}
 
-		private function get_today_payment_breakdown($location_id)
-		{
-                $start_date = date('Y-m-d 00:00:00');
-                $end_date = date('Y-m-d 23:59:59');
-
-                $sales_payments_table = $this->db->dbprefix('sales_payments');
-                $sales_table = $this->db->dbprefix('sales');
-
-                $this->db->select("sp.payment_type, SUM(sp.payment_amount) as total", false);
-                $this->db->from("{$sales_payments_table} AS sp");
-                $this->db->join("{$sales_table} AS s", 's.sale_id = sp.sale_id');
-                $this->db->where('s.sale_time >=', $start_date);
-                $this->db->where('s.sale_time <=', $end_date);
-                $this->db->where('s.location_id', $location_id);
-                $this->db->where('s.deleted', 0);
-                $this->db->group_by('sp.payment_type');
-
-		$rows = $this->db->get()->result_array();
-
-		$labels = array();
-		$totals = array();
-
-		foreach ($rows as $row)
-		{
-		$payment_type = $row['payment_type'];
-
-		if (strpos($payment_type, ':') !== FALSE)
-		{
-		$payment_type = substr($payment_type, 0, strpos($payment_type, ':'));
-		}
-
-		if (strpos($payment_type, 'common_') !== FALSE)
-		{
-		$payment_type = lang($payment_type);
-		}
-
-		$labels[] = $payment_type;
-		$totals[] = (float)$row['total'];
-		}
-
-		return array('labels' => $labels, 'totals' => $totals);
-		}
+        private function get_today_payment_breakdown($location_id)
+        {
+            $start = date('Y-m-d 00:00:00');
+            $end = date('Y-m-d 00:00:00', strtotime('+1 day'));
+            $this->db->select('sale_id, total');
+            $this->db->from('sales');
+            $this->db->where('location_id', $location_id);
+            $this->db->where('sale_time >=', $start);
+            $this->db->where('sale_time <', $end);
+            $this->db->where('deleted', 0);
+            $this->db->where('suspended', 0);
+            $sales = $this->db->get()->result_array();
+            $sales_totals = array();
+            $sales_total = 0;
+            foreach ($sales as $sale)
+            {
+                $sales_totals[$sale['sale_id']] = $sale['total'];
+                $sales_total += $sale['total'];
+            }
+            $summary = array();
+            foreach (array('Efectivo', 'Transferencia', 'Tarjetas', 'Pagos con mercancía') as $label)
+            {
+                $summary[$label] = array('label' => $label, 'operations' => 0, 'total' => 0);
+            }
+            $payment_operations = 0;
+            $payment_total = 0;
+            if ($sales_totals)
+            {
+                $payments = $this->Sale->_get_all_sale_payments(array_keys($sales_totals), TRUE);
+                // Reuse the reports' allocation of change and combined payments.
+                $payments = $this->Sale->get_payment_data_grouped_by_sale($payments, $sales_totals);
+                foreach ($payments as $sale_payments)
+                {
+                    $seen = array();
+                    foreach ($sale_payments as $payment)
+                    {
+                        if ((float)$payment['payment_amount'] == 0) continue;
+                        $type = trim(explode(':', $payment['payment_type'], 2)[0]);
+                        if (strpos($type, 'common_') === 0) $type = lang($type);
+                        $key = mb_strtolower($type, 'UTF-8');
+                        if ($type == lang('common_cash') || in_array($key, array('cash', 'efectivo')))
+                            $label = 'Efectivo';
+                        elseif ($type == lang('common_credit') || $type == lang('common_debit') || preg_match('/tarjeta|credit card|debit card/', $key))
+                            $label = 'Tarjetas';
+                        elseif (preg_match('/transfer|spei/', $key))
+                            $label = 'Transferencia';
+                        elseif (preg_match('/mercanc|merchandise/', $key))
+                            $label = 'Pagos con mercancía';
+                        else
+                            $label = $type;
+                        if (!isset($summary[$label]))
+                            $summary[$label] = array('label' => $label, 'operations' => 0, 'total' => 0);
+                        $summary[$label]['total'] += $payment['payment_amount'];
+                        $payment_total += $payment['payment_amount'];
+                        if (!isset($seen[$label]))
+                        {
+                            $summary[$label]['operations']++;
+                            $payment_operations++;
+                            $seen[$label] = TRUE;
+                        }
+                    }
+                }
+            }
+            return array('rows' => array_values($summary), 'operations' => $payment_operations,
+                'total' => $payment_total, 'sales_count' => count($sales), 'sales_total' => $sales_total);
+        }
 
 		private function get_today_location_sales()
 		{
@@ -128,12 +152,14 @@ $data['saved_reports'] = Report::get_saved_reports();
 
 $current_location = $this->Location->get_info($this->Employee->get_logged_in_employee_current_location_id());
 $current_location_id = $this->Employee->get_logged_in_employee_current_location_id();
-$data['payment_breakdown'] = $this->get_today_payment_breakdown($current_location_id);
+$data['payment_breakdown'] = array();
+$data['current_location_name'] = $current_location->name;
 $data['location_sales'] = $this->get_today_location_sales();
 $data['message']  = "";
 		
 		if ($this->Employee->has_module_action_permission('reports', 'view_dashboard_stats', $this->Employee->get_logged_in_employee_info()->person_id))
 		{	
+			$data['payment_breakdown'] = $this->get_today_payment_breakdown($current_location_id);
 			$data['month_sale'] = $this->sales_widget();
 		}
 		$this->load->helper('demo');
