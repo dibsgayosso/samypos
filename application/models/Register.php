@@ -238,6 +238,29 @@ class Register extends MY_Model
 		
 	}
 
+	/**
+	 * Returns the most recent CLOSED register log for a location, including
+	 * the total difference across all configured payment methods.
+	 */
+	function get_last_closed_register_summary($location_id)
+	{
+		$this->db->select('register_log.register_log_id, register_log.shift_end, registers.name AS register_name, CONCAT(close_person.first_name, " ", close_person.last_name) AS employee_name, SUM(register_log_payments.close_amount - register_log_payments.open_amount - register_log_payments.payment_sales_amount - register_log_payments.total_payment_additions + register_log_payments.total_payment_subtractions) AS difference', FALSE);
+		$this->db->from('register_log');
+		$this->db->join('registers', 'registers.register_id = register_log.register_id');
+		$this->db->join('people AS close_person', 'register_log.employee_id_close = close_person.person_id', 'left');
+		$this->db->join('register_log_payments', 'register_log_payments.register_log_id = register_log.register_log_id');
+		$this->db->where('registers.location_id', $location_id);
+		$this->db->where('register_log.deleted', 0);
+		$this->db->where('register_log.shift_end !=', '0000-00-00 00:00:00');
+		$this->db->where('register_log.shift_end IS NOT NULL', NULL, FALSE);
+		$this->db->group_by('register_log.register_log_id');
+		$this->db->order_by('register_log.shift_end', 'DESC');
+		$this->db->limit(1);
+
+		$query = $this->db->get();
+		return $query->num_rows() ? $query->row_array() : FALSE;
+	}
+
 	function get_closing_amounts($register_log_id)
 	{
 		$this->db->from('register_log_payments');
