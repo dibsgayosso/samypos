@@ -62,7 +62,9 @@
 						<li class="list-group-item"><?php echo (strpos($register_log_row->payment_type,'common_') !== FALSE ? lang($register_log_row->payment_type) : $register_log_row->payment_type).' '.lang('common_sales'). ': <strong class="pull-right">'. to_currency($register_log_row->payment_sales_amount); ?></strong></li>
 						<li class="list-group-item"><?php echo (strpos($register_log_row->payment_type,'common_') !== FALSE ? lang($register_log_row->payment_type) : $register_log_row->payment_type).' '.lang('common_total_additions'). ': <strong class="pull-right">'. to_currency($register_log_row->total_payment_additions); ?></strong></li>
 						<li class="list-group-item"><?php echo (strpos($register_log_row->payment_type,'common_') !== FALSE ? lang($register_log_row->payment_type) : $register_log_row->payment_type).' '.lang('common_total_subtractions'). ': <strong class="pull-right">'. to_currency($register_log_row->total_payment_subtractions); ?></strong></li>
-						<li class="list-group-item"><?php echo lang('reports_difference'). ': <strong class="pull-right">'. to_currency($register_log_row->difference); ?></strong></li>
+						<?php if (!empty($can_view_register_difference)) { ?>
+							<li class="list-group-item hidden-print"><?php echo lang('reports_difference'). ': <strong class="pull-right">'. to_currency($register_log_row->difference); ?></strong></li>
+						<?php } ?>
 				</ul>
 						<?php } ?>
 			</div>
