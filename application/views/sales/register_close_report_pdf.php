@@ -20,11 +20,7 @@ table.data{width:100%;border-collapse:collapse;margin-top:10px}table.data th{bac
 <?php
 $row=$register_log[0];
 $company=!empty($location->company)?$location->company:$this->config->item('company');
-$logo='';
-if (!empty($location->company_logo) && $this->Appconfig->get_logo_image())
-{
-    $logo=$this->Appconfig->get_logo_image();
-}
+$logo = !empty($location->company_logo) ? base_url().'uploads/logos/'.$location->company_logo : '';
 $status=abs($total_difference)<0.005?'CUADRADO':($total_difference>0?'SOBRANTE':'FALTANTE');
 ?>
 <table class="header" width="100%"><tr><td>
