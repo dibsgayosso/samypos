@@ -549,6 +549,28 @@ if (!is_on_demo_host() && !$this->config->item('hide_test_mode_home') && !$this-
 	
 </div>
 
+<?php if (!empty($can_view_register_difference)) { ?>
+<div class="row">
+	<div class="col-md-12">
+		<div class="panel panel-piluku">
+			<div class="panel-heading"><h4>Último corte de caja · <?php echo html_escape($current_location_name); ?></h4></div>
+			<div class="panel-body">
+				<?php if (!empty($last_register_close)) { ?>
+					<div class="row">
+						<div class="col-sm-3 col-xs-6"><strong>Diferencia</strong><br><span style="font-size:24px;font-weight:600;"><?php echo to_currency($last_register_close['difference']); ?></span></div>
+						<div class="col-sm-3 col-xs-6"><strong>Día</strong><br><?php echo date(get_date_format(), strtotime($last_register_close['shift_end'])); ?></div>
+						<div class="col-sm-3 col-xs-6"><strong>Hora del corte</strong><br><?php echo date(get_time_format(), strtotime($last_register_close['shift_end'])); ?></div>
+						<div class="col-sm-3 col-xs-6"><strong>Empleado</strong><br><?php echo html_escape(trim($last_register_close['employee_name'])); ?><br><small class="text-muted"><?php echo html_escape($last_register_close['register_name']); ?></small></div>
+					</div>
+				<?php } else { ?>
+					<span class="text-muted">Todavía no hay un corte de caja cerrado para esta sucursal.</span>
+				<?php } ?>
+			</div>
+		</div>
+	</div>
+</div>
+<?php } ?>
+
 <?php if ($this->Employee->has_module_action_permission('reports', 'view_dashboard_stats', $this->Employee->get_logged_in_employee_info()->person_id)) { ?>
 <div class="row">
 <div class="col-md-6">
