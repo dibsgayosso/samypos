@@ -21,6 +21,7 @@ class Home extends Secure_area
 		$this->load->model('Employee');
 		$this->load->model('Giftcard');
 		$this->load->model('Sale');
+		$this->load->model('Register');
 		$this->load->helper('cloud');
 		$this->load->helper('text');
 		$this->load->model('Appfile');
