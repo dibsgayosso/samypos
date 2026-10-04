@@ -244,21 +244,44 @@ class Register extends MY_Model
 	 */
 	function get_last_closed_register_summary($location_id)
 	{
-		$this->db->select('register_log.register_log_id, register_log.shift_end, registers.name AS register_name, CONCAT(close_person.first_name, " ", close_person.last_name) AS employee_name, SUM(register_log_payments.close_amount - register_log_payments.open_amount - register_log_payments.payment_sales_amount - register_log_payments.total_payment_additions + register_log_payments.total_payment_subtractions) AS difference', FALSE);
+		// First get the most recent CLOSED register log for this location.
+		$this->db->select('register_log.register_log_id, register_log.shift_end, register_log.employee_id_close, registers.name AS register_name');
 		$this->db->from('register_log');
 		$this->db->join('registers', 'registers.register_id = register_log.register_id');
-		$this->db->join('people AS close_person', 'register_log.employee_id_close = close_person.person_id', 'left');
-		$this->db->join('register_log_payments', 'register_log_payments.register_log_id = register_log.register_log_id');
 		$this->db->where('registers.location_id', $location_id);
 		$this->db->where('register_log.deleted', 0);
 		$this->db->where('register_log.shift_end !=', '0000-00-00 00:00:00');
-		$this->db->where('register_log.shift_end IS NOT NULL', NULL, FALSE);
-		$this->db->group_by('register_log.register_log_id');
-		$this->db->order_by('register_log.shift_end', 'DESC');
+		$this->db->order_by('register_log.register_log_id', 'DESC');
 		$this->db->limit(1);
-
 		$query = $this->db->get();
-		return $query->num_rows() ? $query->row_array() : FALSE;
+
+		if (!$query->num_rows())
+		{
+			return FALSE;
+		}
+
+		$summary = $query->row_array();
+
+		// Use the same already-tested calculation used by register_log_details.
+		$rows = $this->get_register_log($summary['register_log_id']);
+		$difference = 0;
+		foreach ($rows as $row)
+		{
+			$difference += (float)$row->difference;
+		}
+		$summary['difference'] = $difference;
+
+		$summary['employee_name'] = '';
+		if (!empty($summary['employee_id_close']))
+		{
+			$person = $this->Employee->get_info($summary['employee_id_close']);
+			if ($person)
+			{
+				$summary['employee_name'] = trim($person->first_name.' '.$person->last_name);
+			}
+		}
+
+		return $summary;
 	}
 
 	function get_closing_amounts($register_log_id)
