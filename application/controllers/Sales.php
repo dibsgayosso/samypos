@@ -403,8 +403,9 @@ function index($dont_switch_employee = 0)
 			$details = $this->Register->get_register_log_details($register_log_id);
 			$location_id = $this->Employee->get_logged_in_employee_current_location_id();
 			$location = $this->Location->get_info($location_id);
-			$recipient = !empty($location->email) ? $location->email : $this->config->item('email');
-			if (!$recipient) return;
+			if (empty($location->register_close_report_enabled)) return;
+			$recipient = trim($location->register_close_report_email);
+			if (!$recipient || !filter_var($recipient, FILTER_VALIDATE_EMAIL)) return;
 
 			$total_sales = 0; $total_difference = 0; $total_additions = 0; $total_subtractions = 0;
 			foreach ($register_log as $row)
@@ -445,8 +446,8 @@ function index($dont_switch_employee = 0)
 			$company = !empty($location->company) ? $location->company : $this->config->item('company');
 			$this->email->from($from, $company);
 			$this->email->to($recipient);
-			if (!empty($location->cc_email)) $this->email->cc($location->cc_email);
-			if (!empty($location->bcc_email)) $this->email->bcc($location->bcc_email);
+			if (!empty($location->register_close_report_cc)) $this->email->cc($location->register_close_report_cc);
+			if (!empty($location->register_close_report_bcc)) $this->email->bcc($location->register_close_report_bcc);
 			$this->email->subject('Cierre de caja - '.$company.' - '.$location->name.' - '.date(get_date_format(), strtotime($register_log[0]->shift_end)));
 			$this->email->message('<p>Se ha realizado un cierre de caja en <strong>'.html_escape($location->name).'</strong>.</p><p>Se adjunta el reporte administrativo en PDF.</p>');
 			$this->email->attach($pdf, 'attachment', 'cierre_caja_'.$register_log_id.'.pdf', 'application/pdf');
