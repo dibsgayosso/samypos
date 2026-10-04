@@ -165,6 +165,12 @@ $data['saved_reports'] = Report::get_saved_reports();
 $current_location = $this->Location->get_info($this->Employee->get_logged_in_employee_current_location_id());
 $current_location_id = $this->Employee->get_logged_in_employee_current_location_id();
 $data['payment_breakdown'] = array();
+$data['last_register_close'] = FALSE;
+$data['can_view_register_difference'] = $this->Employee->has_module_action_permission('reports', 'view_register_difference', $this->Employee->get_logged_in_employee_info()->person_id);
+if ($data['can_view_register_difference'])
+{
+	$data['last_register_close'] = $this->Register->get_last_closed_register_summary($current_location_id);
+}
 $data['current_location_name'] = $current_location->name;
 $data['location_sales'] = $this->get_today_location_sales();
 $data['message']  = "";
