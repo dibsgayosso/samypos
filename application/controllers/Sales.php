@@ -393,6 +393,71 @@ function index($dont_switch_employee = 0)
 		
 	}
 	
+	private function _send_register_close_report($register_log_id)
+	{
+		try
+		{
+			$register_log = $this->Register->get_register_log($register_log_id);
+			if (empty($register_log)) return;
+
+			$details = $this->Register->get_register_log_details($register_log_id);
+			$location_id = $this->Employee->get_logged_in_employee_current_location_id();
+			$location = $this->Location->get_info($location_id);
+			$recipient = !empty($location->email) ? $location->email : $this->config->item('email');
+			if (!$recipient) return;
+
+			$total_sales = 0; $total_difference = 0; $total_additions = 0; $total_subtractions = 0;
+			foreach ($register_log as $row)
+			{
+				$total_sales += (float)$row->payment_sales_amount;
+				$total_difference += (float)$row->difference;
+				$total_additions += (float)$row->total_payment_additions;
+				$total_subtractions += (float)$row->total_payment_subtractions;
+			}
+
+			$this->db->select('COUNT(DISTINCT sale_id) AS operations', FALSE);
+			$this->db->from('sales');
+			$this->db->where('register_id', $register_log[0]->register_id);
+			$this->db->where('sale_time >=', $register_log[0]->shift_start);
+			$this->db->where('sale_time <=', $register_log[0]->shift_end);
+			$this->db->where('deleted', 0);
+			$operations_row = $this->db->get()->row();
+
+			$data = array(
+				'register_log' => $register_log,
+				'register_log_details' => $details,
+				'location' => $location,
+				'total_sales' => $total_sales,
+				'total_difference' => $total_difference,
+				'total_additions' => $total_additions,
+				'total_subtractions' => $total_subtractions,
+				'operations' => $operations_row ? (int)$operations_row->operations : 0,
+			);
+
+			$html = $this->load->view('sales/register_close_report_pdf', $data, TRUE);
+			$this->load->library('m_pdf');
+			$pdf = $this->m_pdf->generate_pdf($html);
+
+			$this->load->library('email');
+			$this->email->clear(TRUE);
+			$this->email->initialize(array('mailtype' => 'html'));
+			$from = !empty($location->email) ? $location->email : $this->config->item('branding')['no_reply_email'];
+			$company = !empty($location->company) ? $location->company : $this->config->item('company');
+			$this->email->from($from, $company);
+			$this->email->to($recipient);
+			if (!empty($location->cc_email)) $this->email->cc($location->cc_email);
+			if (!empty($location->bcc_email)) $this->email->bcc($location->bcc_email);
+			$this->email->subject('Cierre de caja - '.$company.' - '.$location->name.' - '.date(get_date_format(), strtotime($register_log[0]->shift_end)));
+			$this->email->message('<p>Se ha realizado un cierre de caja en <strong>'.html_escape($location->name).'</strong>.</p><p>Se adjunta el reporte administrativo en PDF.</p>');
+			$this->email->attach($pdf, 'attachment', 'cierre_caja_'.$register_log_id.'.pdf', 'application/pdf');
+			$this->email->send();
+		}
+		catch (Exception $e)
+		{
+			log_message('error', 'No se pudo enviar el reporte del cierre '.$register_log_id.': '.$e->getMessage());
+		}
+	}
+
 	function closeregister() 
 	{
 		if (!$this->Register->is_register_log_open()) 
@@ -433,6 +498,9 @@ function index($dont_switch_employee = 0)
 			{
 				$this->Register->update_register_log_payment($register_log_id,$payment_type,array('close_amount' => $closing_amount,'payment_sales_amount' => $payment_sales[$payment_type]));
 			}
+
+			// El cierre nunca depende del correo: si el envio falla, solo se registra en el log.
+			$this->_send_register_close_report($register_log_id);
 			if ($continueUrl == 'logout') 
 			{
 				redirect(site_url('home/logout'));
