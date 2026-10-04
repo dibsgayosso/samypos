@@ -1310,3 +1310,4 @@ $lang['common_item_unit_selling_price'] = 'Precio de venta unitario del artícul
 $lang['common_item_unit_discount_percent'] = 'Porcentaje de descuento unitario del artículo';
 $lang['common_use_this_price'] = 'Utilice este precio';
 ?>
+$lang['common_view_register_difference'] = 'Ver diferencia en cortes de caja';
