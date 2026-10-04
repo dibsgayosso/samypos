@@ -215,6 +215,32 @@
 									</div>
 								</div>
 								
+								<div class="panel panel-piluku" style="margin-top:20px;">
+									<div class="panel-heading"><h3 class="panel-title">Reportes automáticos de cierre de caja</h3></div>
+									<div class="panel-body">
+										<div class="form-group">
+											<?php echo form_label('Activar envío automático:', 'register_close_report_enabled',array('class'=>'col-sm-3 col-md-3 col-lg-2 control-label')); ?>
+											<div class="col-sm-9 col-md-9 col-lg-10">
+												<?php echo form_checkbox(array('name'=>'register_close_report_enabled','id'=>'register_close_report_enabled','value'=>'1','checked'=>!empty($location_info->register_close_report_enabled))); ?>
+												<label for="register_close_report_enabled"><span></span></label>
+												<p class="help-block">Al cerrar caja se enviará automáticamente el PDF administrativo. Un fallo de correo no bloquea el cierre.</p>
+											</div>
+										</div>
+										<div class="form-group">
+											<?php echo form_label('Correo destinatario:', 'register_close_report_email',array('class'=>'col-sm-3 col-md-3 col-lg-2 control-label')); ?>
+											<div class="col-sm-9 col-md-9 col-lg-10"><?php echo form_input(array('type'=>'email','class'=>'form-control form-inps','name'=>'register_close_report_email','id'=>'register_close_report_email','value'=>$location_info->register_close_report_email,'placeholder'=>'administracion@empresa.com')); ?></div>
+										</div>
+										<div class="form-group">
+											<?php echo form_label('CC:', 'register_close_report_cc',array('class'=>'col-sm-3 col-md-3 col-lg-2 control-label')); ?>
+											<div class="col-sm-9 col-md-9 col-lg-10"><?php echo form_input(array('type'=>'text','class'=>'form-control form-inps','name'=>'register_close_report_cc','id'=>'register_close_report_cc','value'=>$location_info->register_close_report_cc)); ?></div>
+										</div>
+										<div class="form-group">
+											<?php echo form_label('BCC:', 'register_close_report_bcc',array('class'=>'col-sm-3 col-md-3 col-lg-2 control-label')); ?>
+											<div class="col-sm-9 col-md-9 col-lg-10"><?php echo form_input(array('type'=>'text','class'=>'form-control form-inps','name'=>'register_close_report_bcc','id'=>'register_close_report_bcc','value'=>$location_info->register_close_report_bcc)); ?></div>
+										</div>
+									</div>
+								</div>
+
 								<div class="form-group">
 									<?php echo form_label(lang('locations_email_sales_email').':', 'email_sales_email',array('class'=>'col-sm-3 col-md-3 col-lg-2 control-label')); ?>
 									<div class="col-sm-9 col-md-9 col-lg-10">
