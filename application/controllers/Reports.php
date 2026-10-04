@@ -666,6 +666,7 @@ class Reports extends Secure_area
 				'register_log' => $this->Register->get_register_log($id),
 				'register_log_details' => $this->Register->get_register_log_details($id),
 				'key' => $this->input->get('key'),
+				'can_view_register_difference' => $this->Employee->has_module_action_permission('reports', 'view_register_difference', $this->Employee->get_logged_in_employee_info()->person_id),
 			)
 		);
 		
