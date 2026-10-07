@@ -3,6 +3,20 @@ $this->load->helper('demo');
 ?>
 <?php if ($supervisor_result=$this->session->flashdata('supervisor_result')) { ?><div class="alert alert-info" role="status"><?php echo html_escape($supervisor_result); ?></div><?php } ?>
 
+<?php if (!empty($can_view_owner_dashboard)) { ?>
+<div id="owner-dashboard"><?php $this->load->view('owner_panel'); ?></div>
+<script>
+(function(){var busy=false;setInterval(function(){
+ if(busy||document.hidden)return;busy=true;
+ var opened=[];jQuery('#owner-dashboard details[open]').each(function(){opened.push(this.id);});
+ jQuery.get(<?php echo json_encode(site_url('home/owner_panel')); ?>).done(function(html){
+  jQuery('#owner-dashboard').html(html);opened.forEach(function(id){var node=document.getElementById(id);if(node)node.open=true;});
+  jQuery('#owner-dashboard-refresh').text('Actualizado '+new Date().toLocaleTimeString());
+ }).fail(function(){jQuery('#owner-dashboard-refresh').text('No se pudo actualizar. Se reintentará en 30 segundos.');}).always(function(){busy=false;});
+},30000);})();
+</script>
+<?php } ?>
+
 		<?php
 		if(isset($announcement))
 		{

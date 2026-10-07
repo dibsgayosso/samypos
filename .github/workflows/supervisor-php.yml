@@ -55,3 +55,10 @@ jobs:
           node --check assets/js/samypos-push.js
           node --check upup.sw.min.js
           node tests/push_worker.js
+      - name: Verify owner dashboard permissions and financial summaries
+        run: |
+          php -l application/models/Owner_dashboard.php
+          php -l application/views/owner_panel.php
+          php -l application/models/Register.php
+          php -l application/migrations/20261007140000_owner_dashboard.php
+          php tests/owner_dashboard.php

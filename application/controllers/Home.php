@@ -32,7 +32,7 @@ class Home extends Secure_area
 
 		}
 
-        private function get_today_payment_breakdown($location_id)
+        private function get_today_payment_breakdown($location_id,$merchandise_only=FALSE)
         {
             $start = date('Y-m-d 00:00:00');
             $end = date('Y-m-d 00:00:00', strtotime('+1 day'));
@@ -43,6 +43,7 @@ class Home extends Secure_area
             $this->db->where('sale_time <', $end);
             $this->db->where('deleted', 0);
             $this->db->where('suspended', 0);
+            if ($merchandise_only) $this->db->where('store_account_payment',0);
             $sales = $this->db->get()->result_array();
             $sales_totals = array();
             $sales_total = 0;
@@ -141,6 +142,20 @@ class Home extends Secure_area
 		return array('labels' => $labels, 'totals' => $totals);
 		}
 
+    private function owner_data()
+    {
+        $this->load->model('Owner_dashboard');
+        return $this->Owner_dashboard->snapshot($this->session->userdata('person_id'),function($location) {
+            return $this->get_today_payment_breakdown($location,TRUE);
+        });
+    }
+    public function owner_panel()
+    {
+        $this->load->model('Owner_dashboard');
+        if (!$this->Owner_dashboard->allowed_locations($this->session->userdata('person_id'))) { show_error('Sin permiso del panel de propietario',403); return; }
+        $this->output->set_header('Cache-Control: no-store');
+        $this->load->view('owner_panel',array('owner_dashboard'=>$this->owner_data()));
+    }
     private function can_supervise()
     {
         return $this->Employee->has_module_action_permission('receivings','authorize_receivings',$this->Employee->get_logged_in_employee_info()->person_id);
@@ -223,6 +238,9 @@ $current_location = $this->Location->get_info($this->Employee->get_logged_in_emp
 $current_location_id = $this->Employee->get_logged_in_employee_current_location_id();
 $this->load->model('Supervisor_dashboard');
 $data['my_receiving_requests'] = $this->Supervisor_dashboard->own_requests($current_location_id,$this->Employee->get_logged_in_employee_info()->person_id);
+$this->load->model('Owner_dashboard');
+$data['can_view_owner_dashboard'] = (bool)$this->Owner_dashboard->allowed_locations($this->session->userdata('person_id'));
+if ($data['can_view_owner_dashboard']) $data['owner_dashboard'] = $this->owner_data();
 $data['can_supervise'] = $this->can_supervise();
 if ($data['can_supervise']) $data = array_merge($data,$this->supervisor_data());
 $data['payment_breakdown'] = array();
