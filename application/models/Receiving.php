@@ -184,6 +184,13 @@ class Receiving extends MY_Model
 		
 		);
 		
+		// A completed receipt or any edited receipt requires a fresh supervisor review.
+		if ($this->db->field_exists('supervisor_status', 'receivings'))
+		{
+			$receivings_data['supervisor_status'] = (!$suspended && !$is_po && !$store_account_payment && $recv_total_qty > 0) ? 'pending' : NULL;
+			$receivings_data['supervisor_revision'] = $before_save_receiving_info && isset($before_save_receiving_info->supervisor_revision) ? $before_save_receiving_info->supervisor_revision + 1 : 1;
+		}
+
 		for($k=1;$k<=NUMBER_OF_PEOPLE_CUSTOM_FIELDS;$k++) 
 		{
 			$receivings_data["custom_field_${k}_value"] = $this->cart->{"custom_field_${k}_value"};

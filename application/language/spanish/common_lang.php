@@ -1311,3 +1311,5 @@ $lang['common_item_unit_discount_percent'] = 'Porcentaje de descuento unitario d
 $lang['common_use_this_price'] = 'Utilice este precio';
 $lang['common_view_register_difference'] = 'Ver diferencia en cortes de caja';
 ?>
+
+$lang['common_authorize_receivings'] = 'Autorizar recepciones de mercancía';

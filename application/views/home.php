@@ -549,6 +549,22 @@ if (!is_on_demo_host() && !$this->config->item('hide_test_mode_home') && !$this-
 	
 </div>
 
+<?php if (!empty($can_supervise)) { ?>
+<div id="supervisor-panel"><?php $this->load->view('supervisor_panel'); ?></div>
+<script>
+(function(){
+ var busy=false;
+ setInterval(function(){
+  if(busy || document.hidden) return;
+  busy=true;
+  jQuery.get(<?php echo json_encode(site_url('home/supervisor_panel')); ?>).done(function(html){
+   jQuery('#supervisor-panel').html(html);
+  }).always(function(){busy=false;});
+ },30000);
+})();
+</script>
+<?php } ?>
+
 <?php if (!empty($can_view_register_difference)) { ?>
 <div class="row">
 	<div class="col-md-12">
@@ -571,7 +587,7 @@ if (!is_on_demo_host() && !$this->config->item('hide_test_mode_home') && !$this-
 </div>
 <?php } ?>
 
-<?php if ($this->Employee->has_module_action_permission('reports', 'view_dashboard_stats', $this->Employee->get_logged_in_employee_info()->person_id)) { ?>
+<?php if (!empty($can_supervise) || $this->Employee->has_module_action_permission('reports', 'view_dashboard_stats', $this->Employee->get_logged_in_employee_info()->person_id)) { ?>
 <div class="row">
 <div class="col-md-6">
 <div class="panel panel-piluku">

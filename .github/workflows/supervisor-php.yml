@@ -1,0 +1,21 @@
+name: Supervisor PHP syntax
+on:
+  pull_request:
+    paths:
+      - 'application/**'
+      - '.github/workflows/supervisor-php.yml'
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate modified PHP files
+        run: |
+          php -l application/controllers/Home.php
+          php -l application/models/Receiving.php
+          php -l application/models/Supervisor_dashboard.php
+          php -l application/views/home.php
+          php -l application/views/supervisor_panel.php
+          php -l application/migrations/20261007053000_receiving_supervisor.php
+          php -l application/language/spanish/common_lang.php
+          php -l application/language/english/common_lang.php
