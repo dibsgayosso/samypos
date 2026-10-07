@@ -495,6 +495,7 @@ a {
 											<tr>
 												<td class="text text-right" style="padding-bottom:0;padding-right:0;padding-left:0;text-align:right !important;padding-top:0px;" >
 														<?php echo "<b>".lang('common_employee').":</b> ".H($employee); ?>
+<?php $this->load->view('receivings/authorization_stamp'); ?>
 												</td>
 											</tr>
 										</table>

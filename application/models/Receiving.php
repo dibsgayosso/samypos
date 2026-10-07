@@ -79,7 +79,8 @@ class Receiving extends MY_Model
     {
         $employee = $this->Employee->get_logged_in_employee_info()->person_id;
         if (!$this->Employee->has_module_action_permission('receivings','authorize_receivings',$employee)
-            || (int)$request['location_id'] !== (int)$this->Employee->get_logged_in_employee_current_location_id()) return -1;
+            || (int)$request['location_id'] !== (int)$this->Employee->get_logged_in_employee_current_location_id()
+            || !isset($request['employee_id']) || (int)$request['employee_id']===(int)$employee) return -1;
         $cart = unserialize(base64_decode($request['cart_payload'], TRUE), array('allowed_classes'=>array(
             'PHPPOSCartRecv','PHPPOSCartItemRecv','PHPPOSCartItemKitRecv','PHPPOSCartPaymentRecv','stdClass')));
         if (!($cart instanceof PHPPOSCartRecv) || $cart->get_mode() === 'store_account_payment') return -1;

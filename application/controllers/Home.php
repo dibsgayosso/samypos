@@ -161,13 +161,40 @@ class Home extends Secure_area
         $this->output->set_header('Cache-Control: no-store');
         $this->load->view('supervisor_panel',$this->supervisor_data());
     }
+    public function my_receiving_requests()
+    {
+        $this->load->model('Supervisor_dashboard');
+        $this->output->set_header('Cache-Control: no-store');
+        $this->load->view('my_receiving_requests',array('my_receiving_requests'=>$this->Supervisor_dashboard->own_requests(
+            $this->Employee->get_logged_in_employee_current_location_id(),$this->Employee->get_logged_in_employee_info()->person_id)));
+    }
     public function receiving_request($id)
     {
-        if (!$this->can_supervise()) { show_error('Sin permiso',403); return; }
         $this->load->model('Supervisor_dashboard');
+        $employee=$this->Employee->get_logged_in_employee_info()->person_id;
         $request=$this->Supervisor_dashboard->detail((int)$id,$this->Employee->get_logged_in_employee_current_location_id());
+        if (!$request && $this->Supervisor_dashboard->ready()) {
+            // An authenticated email review link may select a branch the supervisor is allowed to oversee.
+            $other=$this->db->get_where('receiving_requests',array('id'=>(int)$id))->row_array();
+            if ($other && in_array($other['location_id'],$this->Employee->get_authenticated_location_ids($employee))
+                && $this->Employee->has_module_permission('receivings',$employee)
+                && $this->Employee->has_module_action_permission('receivings','authorize_receivings',$employee,$other['location_id'])) {
+                $this->Employee->set_employee_current_location_id($other['location_id']);
+                $this->Employee->set_employee_current_register_id(NULL);
+                redirect('home/receiving_request/'.(int)$id); return;
+            }
+        }
         if (!$request) { show_404(); return; }
-        $this->load->view('receiving_request',array('request'=>$request,'supervisor_token'=>$this->supervisor_data()['supervisor_token']));
+        $can_review=$this->can_supervise();
+        if (!$can_review && (int)$request['employee_id']!==(int)$employee) { show_error('Sin permiso',403); return; }
+        $this->load->model('Supplier');
+        $this->load->model('Receiving_notifications');
+        $this->load->view('receiving_request',array('request'=>$request,
+            'notification_status'=>$this->Receiving_notifications->summary($request['id']),
+            'request_employee'=>$this->Employee->get_info($request['employee_id']),
+            'request_supplier'=>$this->Supplier->get_info($request['supplier_id'] ?: -1),
+            'can_authorize_request'=>$can_review && (int)$request['employee_id']!==(int)$employee,
+            'supervisor_token'=>$can_review ? $this->supervisor_data()['supervisor_token'] : ''));
     }
 
 function index($choose_location=0)
@@ -194,6 +221,8 @@ $data['saved_reports'] = Report::get_saved_reports();
 
 $current_location = $this->Location->get_info($this->Employee->get_logged_in_employee_current_location_id());
 $current_location_id = $this->Employee->get_logged_in_employee_current_location_id();
+$this->load->model('Supervisor_dashboard');
+$data['my_receiving_requests'] = $this->Supervisor_dashboard->own_requests($current_location_id,$this->Employee->get_logged_in_employee_info()->person_id);
 $data['can_supervise'] = $this->can_supervise();
 if ($data['can_supervise']) $data = array_merge($data,$this->supervisor_data());
 $data['payment_breakdown'] = array();

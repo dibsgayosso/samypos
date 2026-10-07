@@ -40,6 +40,32 @@ class Receivings extends Secure_area
 		cache_item_and_item_kit_cart_info($this->cart->get_items());
 	}
 	
+    public function request_receipt($id)
+    {
+        $this->load->model('Supervisor_dashboard');
+        $request=$this->Supervisor_dashboard->detail((int)$id,$this->Employee->get_logged_in_employee_current_location_id());
+        $employee=$this->Employee->get_logged_in_employee_info()->person_id;
+        if (!$request || ((int)$request['employee_id']!==(int)$employee && !$this->Employee->has_module_action_permission('receivings','authorize_receivings',$employee))) { show_error('Sin permiso',403); return; }
+        if (!$this->Supervisor_dashboard->can_print_request($request,$employee,$this->Employee->get_logged_in_employee_current_location_id(),$this->Employee->has_module_action_permission('receivings','authorize_receivings',$employee))) { show_error('El recibo solo se puede imprimir después de la autorización.',403); return; }
+        $this->receipt($request['receiving_id']);
+    }
+    private function require_authorized_receipt($id)
+    {
+        $info=$this->Receiving->get_info((int)$id)->row_array();
+        if (!$info) { show_404(); return FALSE; }
+        if (!$info['store_account_payment'] && $info['suspended'] && !$info['is_po']) { show_error('Recepción pendiente: todavía no hay un recibo autorizado para imprimir.',403); return FALSE; }
+        $this->load->model('Supervisor_dashboard');
+        $request=$this->Supervisor_dashboard->authorization_for_receipt((int)$id);
+        if ($request) {
+            $employee=$this->Employee->get_logged_in_employee_info()->person_id;
+            if ($info['deleted'] || !$this->Supervisor_dashboard->can_print_request($request,$employee,
+                $this->Employee->get_logged_in_employee_current_location_id(),$this->Employee->has_module_action_permission('receivings','authorize_receivings',$employee))) { show_error('Sin permiso para este recibo',403); return FALSE; }
+            $supervisor=$this->Employee->get_info($request['authorized_by']);
+            $this->load->vars(array('receiving_authorization'=>array('request_id'=>$request['id'],
+                'supervisor'=>trim($supervisor->first_name.' '.$supervisor->last_name),'authorized_at'=>$request['authorized_at'])));
+        }
+        return TRUE;
+    }
     public function authorize_pending()
     {
         $employee=$this->Employee->get_logged_in_employee_info()->person_id;
@@ -710,10 +736,14 @@ class Receivings extends Secure_area
             if (!$this->session->userdata('receiving_submission_key')) $this->session->set_userdata('receiving_submission_key',bin2hex(random_bytes(32)));
             $id=$this->Supervisor_dashboard->stage($this->cart,$this->session->userdata('receiving_submission_key'));
             if (!$id) { $this->_reload(array('error'=>'No se registró mercancía. Aplica la migración de autorización. Para corregir un recibo existente debe intervenir el supervisor; captura una solicitud nueva.'),FALSE); return; }
+            $this->load->model('Receiving_notifications');
+            // SMTP failure must never discard the employee's pending request.
+            try { $this->Receiving_notifications->enqueue($id); }
+            catch (Throwable $error) { log_message('error','Receiving supervisor email queued for retry'); }
             $this->session->unset_userdata('receiving_submission_key');
             $this->cart->destroy();
             $this->session->set_flashdata('supervisor_result','Solicitud #'.$id.' enviada al supervisor. El inventario sigue sin cambios.');
-            redirect('home');
+            redirect('home/receiving_request/'.$id);
             return;
         }
 		$data = $this->_get_shared_data();
@@ -919,6 +949,7 @@ class Receivings extends Secure_area
 	
 	function email_receipt($receiving_id)
 	{
+        if (!$this->require_authorized_receipt($receiving_id)) return;
 		
 		$cart_recv = PHPPOSCartRecv::get_instance_from_recv_id($receiving_id);
 		$data = $this->_get_shared_data();
@@ -1003,6 +1034,7 @@ class Receivings extends Secure_area
 	
 	function download_receipt($receiving_id)
 	{
+        if (!$this->require_authorized_receipt($receiving_id)) return;
 		
 		$cart_recv = PHPPOSCartRecv::get_instance_from_recv_id($receiving_id);
 		$data = $this->_get_shared_data();
@@ -1436,6 +1468,7 @@ class Receivings extends Secure_area
 
 	function receipt($receiving_id)
 	{
+        if (!$this->require_authorized_receipt($receiving_id)) return;
 		$receipt_cart = PHPPOSCartRecv::get_instance_from_recv_id($receiving_id);
 		
 		if ($receipt_cart->suspended && !$this->Employee->has_module_action_permission('receivings', 'view_suspended_receipt', $this->Employee->get_logged_in_employee_info()->person_id))

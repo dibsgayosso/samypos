@@ -3,7 +3,7 @@ on:
   pull_request:
     paths:
       - 'application/**'
-      - 'tests/supervisor_receiving.php'
+      - 'tests/**'
       - '.github/workflows/supervisor-php.yml'
 jobs:
   lint:
@@ -16,6 +16,14 @@ jobs:
           php -l application/controllers/api/v1/Receivings.php
           php -l application/views/receivings/receiving.php
           php -l application/views/receiving_request.php
+          php -l application/controllers/Receivingnotifications.php
+          php -l application/models/Receiving_notifications.php
+          php -l application/migrations/20261007060000_receiving_notifications.php
+          php -l application/views/my_receiving_requests.php
+          php -l application/views/receivings/authorization_stamp.php
+          php -l application/views/receivings/receipt.php
+          php -l application/views/receivings/receipt_html.php
+          php -l application/views/receivings/receipt_email.php
           php -l application/controllers/Home.php
           php -l application/models/Receiving.php
           php -l application/models/Supervisor_dashboard.php
@@ -26,3 +34,5 @@ jobs:
           php -l application/language/english/common_lang.php
       - name: Verify server authorization guard and duplicate approval protection
         run: php tests/supervisor_receiving.php
+      - name: Verify recipient selection and failed email retry
+        run: php tests/receiving_notifications.php

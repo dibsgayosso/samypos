@@ -145,6 +145,7 @@ for ($k = 1; $k <= NUMBER_OF_PEOPLE_CUSTOM_FIELDS; $k++) {
 							<?php
 							} ?>
 							<li id="employee"><span><?php echo lang('common_employee', '', array(), TRUE) . ": "; ?></span><?php echo H($employee); ?></li>
+<?php if (!empty($receiving_authorization)) { ?><li><?php $this->load->view('receivings/authorization_stamp'); ?></li><?php } ?>
 						</ul>
 					</div>
 					<?php if (isset($supplier) || isset($transfer_to_location)) { ?>

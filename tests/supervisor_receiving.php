@@ -41,7 +41,7 @@ class ResultStub {
     function row_array() { return $this->row; }
 }
 class DBStub {
-    public $row=array('id'=>1,'location_id'=>1,'status'=>'pending','supervisor_revision'=>1);
+    public $row=array('id'=>1,'location_id'=>1,'status'=>'pending','supervisor_revision'=>1,'employee_id'=>11);
     public $stock=0, $calls=0, $begin=0, $commits=0, $rollbacks=0, $healthy=TRUE;
     private $backup;
     function table_exists($table) { return TRUE; }
@@ -70,6 +70,9 @@ check(!$service->authorize(1,1,1,10) && $service->db->begin===0,'Unauthorized ap
 $service->Employee->allowed=TRUE;
 check(!$service->authorize(1,1,2,10) && $service->db->begin===0,'Cross-branch approval must do no writes');
 check(!$service->authorize(1,2,1,10) && $service->db->calls===0,'Stale revision must not apply merchandise');
+$service->db->row['employee_id']=10;
+check(!$service->authorize(1,1,1,10) && $service->db->calls===0,'The requesting employee must never approve their own receipt');
+$service->db->row['employee_id']=11;
 $service->Receiving->fail=TRUE;
 check(!$service->authorize(1,1,1,10) && $service->db->stock===0 && $service->db->row['status']==='pending','Failure must roll back application and keep the request pending');
 $service->Receiving->fail=FALSE;
@@ -98,4 +101,12 @@ $cart->items=array(new StageLineStub());
 check($stage->stage($cart,'unique-key')===7,'Submission must create a pending request');
 check(count($stage->db->writes)===1 && $stage->db->writes[0][0]==='receiving_requests','Submitting merchandise must write only the pending queue, never inventory or supplier balances');
 check($stage->db->writes[0][1]['employee_id']===10 && $stage->db->writes[0][1]['location_id']===1,'Pending request must bind the actual employee and branch');
+$policy=new Supervisor_dashboard();
+$approved=array('status'=>'authorized','employee_id'=>11,'location_id'=>1,'receiving_id'=>123);
+check($policy->can_print_request($approved,11,1,FALSE),'Requester must be able to print after approval');
+check(!$policy->can_print_request(array_merge($approved,array('status'=>'pending')),11,1,TRUE),'Even a supervisor cannot print a pending request');
+check(!$policy->can_print_request(array_merge($approved,array('status'=>'rejected')),11,1,TRUE),'Rejected merchandise must never have an authorized receipt');
+check(!$policy->can_print_request($approved,11,2,TRUE),'Receipt cannot be printed through a different branch');
+check(!$policy->can_print_request($approved,12,1,FALSE),'Another employee cannot print a receipt owned by someone else');
+check($policy->can_print_request($approved,12,1,TRUE),'Supervisor may print an authorized receipt in their branch');
 echo "Supervisor authorization regression tests passed\n";

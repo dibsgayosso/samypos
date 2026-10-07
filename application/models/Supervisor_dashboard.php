@@ -41,6 +41,24 @@ class Supervisor_dashboard extends CI_Model
         if (!$this->ready()) return FALSE;
         return $this->db->get_where('receiving_requests',array('id'=>$id,'location_id'=>$location))->row_array();
     }
+    public function own_requests($location,$employee)
+    {
+        if (!$this->ready()) return array();
+        return $this->db->select('id,status,receiving_time,total,receiving_id,authorized_by,authorized_at,rejection_reason')
+            ->from('receiving_requests')->where('location_id',$location)->where('employee_id',$employee)
+            ->order_by('id','DESC')->limit(30)->get()->result_array();
+    }
+    public function can_print_request($request,$employee,$location,$supervisor)
+    {
+        return $request && $request['status']==='authorized' && (int)$request['receiving_id']>0
+            && (int)$request['location_id']===(int)$location
+            && ((int)$request['employee_id']===(int)$employee || $supervisor);
+    }
+    public function authorization_for_receipt($id)
+    {
+        if (!$this->ready()) return FALSE;
+        return $this->db->get_where('receiving_requests',array('receiving_id'=>$id))->row_array();
+    }
     public function authorize($id, $revision, $location, $employee)
     {
         if (!$this->ready() || !$this->Employee->has_module_action_permission('receivings','authorize_receivings',$employee)
@@ -49,7 +67,7 @@ class Supervisor_dashboard extends CI_Model
         $table=$this->db->dbprefix('receiving_requests');
         $request=$this->db->query("SELECT * FROM `$table` WHERE id=? AND location_id=? AND status='pending' AND supervisor_revision=? FOR UPDATE",
             array($id,$location,$revision))->row_array();
-        if (!$request) { $this->db->trans_rollback(); return FALSE; }
+        if (!$request || (int)$request['employee_id']===(int)$employee) { $this->db->trans_rollback(); return FALSE; }
         $this->load->model('Receiving');
         try { $receiving=$this->Receiving->apply_supervisor_request($request); }
         catch (Throwable $error) { $this->db->trans_rollback(); log_message('error','Supervisor receipt application failed'); return FALSE; }
