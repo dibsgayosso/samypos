@@ -20,18 +20,26 @@ El inventario se aplica con actualizaciones locales síncronas. Se omiten los we
 
 Antes de producción, probar con una copia de la base: enviar una solicitud y confirmar que cantidades/costos/saldo/series no cambien; revisar y autorizar con otro usuario; comparar el inventario y el saldo resultantes con el recibo; repetir el POST de autorización sin duplicar movimientos; rechazar una solicitud; intentar confirmar por API o recibir parcialmente; probar productos con variantes, empaques, series, moneda extranjera y transferencias entre sucursales autorizadas. Confirmar que las tablas afectadas usen InnoDB para permitir reversión transaccional.
 
-## Aviso en el teléfono y recibo autorizado
+## Notificaciones push y recibo autorizado
 
-Aplicar también la migración `20261007060000_receiving_notifications`. Completar el correo de cada supervisor en Empleados y configurar SMTP en Configuración del sistema. El aviso se envía a cuentas activas con acceso a Recepciones, permiso de autorización y acceso a la sucursal de la solicitud. Se excluye la cuenta que capturó la mercancía. La elegibilidad y el correo se verifican nuevamente al intentar el envío. El enlace exige login y nunca autoriza por abrirlo.
+Aplicar la migración `20261007123000_receiving_push` además de la migración de autorización. Usar HTTPS y PHP 8.2 o posterior con curl, mbstring, openssl, phar y zlib. Permitir conexiones salientes HTTPS a los servicios push de los navegadores. La librería mantenida minishlink/web-push está fijada en composer.lock y empaquetada con sus licencias; no hace falta ejecutar Composer en cPanel. Para reconstruirla: dentro de application/libraries/webpush ejecutar `composer install --no-dev`, seguido de `php -d phar.readonly=0 build.php`.
 
-El empleado ve sus 30 solicitudes más recientes en Home, con estado y motivo de rechazo. La lista se actualiza cada 30 segundos. Al autorizar se habilita **Imprimir recibo autorizado**. Las rutas de impresión, PDF y correo comprueban autorización y acceso; el recibo muestra el empleado que capturó más el supervisor y fecha de autorización. El supervisor puede revisar desde el celular; la notificación del correo en pantalla depende de tener activadas las notificaciones de su app de correo.
+Con una cuenta con acceso a Configuración, abrir Home y pulsar **Activar servicio push**. Esto genera claves VAPID una sola vez en el servidor. No publicar ni copiar la clave privada; respaldar la tabla webpush_settings junto con la base y conservarla al desplegar actualizaciones para mantener las suscripciones.
 
-La solicitud se conserva aunque SMTP falle. El envío se procesa fuera de la captura para evitar que SMTP retrase al empleado. Configurar un cron de cPanel cada minuto para avisos y reintentos:
+Cada supervisor entra desde su teléfono y pulsa **Activar en este teléfono**, acepta el permiso del navegador y usa **Enviar prueba**. En iPhone/iPad se requiere iOS/iPadOS 16.4 o posterior, agregar SAMYPOS a la pantalla de inicio y abrirlo desde ese icono. No hace falta publicar una app en las tiendas. Cada teléfono debe activarse por separado. En equipos compartidos desactivar los avisos antes de cambiar de usuario; activar con otra cuenta vincula ese navegador a la nueva cuenta. Las notificaciones muestran texto genérico, sin importes ni nombres en la pantalla bloqueada.
+
+Configurar un cron de cPanel cada minuto con PHP 8.2 o posterior:
 
 ```sh
 /usr/local/bin/php /RUTA/DEL/SISTEMA/index.php receivingnotifications cron https://TU-DOMINIO/
 ```
 
-Usar la ruta real de PHP y del sistema, y su URL pública real. El trabajador solo admite CLI y no requiere exponer una URL sin login. Recupera envíos interrumpidos, bloquea mensajes en proceso y reintenta hasta 10 veces con espera creciente. Una interrupción después de aceptar SMTP y antes de guardar `sent` puede producir un correo repetido; no duplica recepción ni inventario. La pantalla de la solicitud muestra si el aviso fue enviado, sigue en cola o no hay destinatarios con correo válido. No se han enviado correos de prueba ni configurado el servidor real.
+El trabajador solo admite CLI. La captura encola el aviso sin esperar una conexión externa; el cron recupera solicitudes pendientes e incluye dispositivos activados posteriormente. Revalida usuario activo, permisos de Recepciones/autorización y acceso a la sucursal antes de enviar. Excluye al capturista. Reintenta hasta 10 veces con espera creciente, recupera trabajos interrumpidos y desactiva suscripciones vencidas (HTTP 404/410). No envía correos automáticamente. El panel de Home sigue disponible aunque el teléfono no tenga permiso o el servicio push falle.
+
+La entrega depende de conexión, permisos y configuración del teléfono. El estado “aceptado” significa que el servicio push aceptó el aviso, no que el supervisor lo leyó. Una interrupción tras el envío puede repetir el aviso; el tag agrupa avisos de la misma solicitud y la autorización sigue siendo única. La notificación abre la recepción para revisión y exige sesión y permisos; abrirla no autoriza. No se almacenan páginas privadas adicionales en caché.
+
+El empleado ve sus 30 solicitudes más recientes en Home, con estado y motivo de rechazo. La lista se actualiza cada 30 segundos. Al autorizar se habilita **Imprimir recibo autorizado**. Las rutas de impresión, PDF y correo comprueban autorización y acceso; el recibo muestra al empleado que capturó, al supervisor y la fecha de autorización.
+
+Pruebas automatizadas: `php tests/receiving_push.php`, `node tests/push_worker.js`, más las comprobaciones anteriores de autorización. Validan el runtime empaquetado y claves VAPID, formato de suscripciones y destinos seguros, exclusión del capturista, permisos/sucursal, reintentos y cancelación, y visualización/apertura del aviso. Antes de producción aplicar migraciones en una copia de la base y probar la entrega real con Android e iPhone, Chrome/Edge/Safari, permiso denegado, teléfono sin conexión, recepción ya autorizada y cambio de sucursal. No se han configurado ni probado dispositivos reales desde este entorno.
 
 La separación de cuentas aporta trazabilidad, pero no acredita por sí sola la entrega física. El supervisor debe contrastar mercancía, cantidades, costo y documento del proveedor antes de aprobar.

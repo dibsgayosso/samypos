@@ -1,0 +1,12 @@
+{
+  "name": "samypos/webpush-runtime",
+  "description": "Web Push runtime for SAMYPOS receiving approvals",
+  "require": {
+    "php": ">=8.2",
+    "minishlink/web-push": "^10.0"
+  },
+  "config": {
+    "allow-plugins": false,
+    "sort-packages": true
+  }
+}

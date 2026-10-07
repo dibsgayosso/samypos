@@ -7,6 +7,9 @@
 		  window.location.hash = "";
 	</script>
 	<meta charset="UTF-8" />
+ <link rel="manifest" href="<?php echo base_url('manifest.webmanifest'); ?>" />
+ <link rel="apple-touch-icon" href="<?php echo base_url('assets/img/push-192.png'); ?>" />
+ <meta name="theme-color" content="#243c64" />
     <title><?php 
 		 $this->load->helper('demo');
 	 	 $company = ($company = $this->Location->get_info_for_key('company')) ? $company : $this->config->item('company');

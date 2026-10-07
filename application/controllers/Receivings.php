@@ -736,10 +736,10 @@ class Receivings extends Secure_area
             if (!$this->session->userdata('receiving_submission_key')) $this->session->set_userdata('receiving_submission_key',bin2hex(random_bytes(32)));
             $id=$this->Supervisor_dashboard->stage($this->cart,$this->session->userdata('receiving_submission_key'));
             if (!$id) { $this->_reload(array('error'=>'No se registró mercancía. Aplica la migración de autorización. Para corregir un recibo existente debe intervenir el supervisor; captura una solicitud nueva.'),FALSE); return; }
-            $this->load->model('Receiving_notifications');
-            // SMTP failure must never discard the employee's pending request.
-            try { $this->Receiving_notifications->enqueue($id); }
-            catch (Throwable $error) { log_message('error','Receiving supervisor email queued for retry'); }
+            $this->load->model('Receiving_push');
+            // Push failure must never discard the employee's pending request.
+            try { $this->Receiving_push->enqueue($id); }
+            catch (Throwable $error) { log_message('error','Receiving supervisor push queued for retry'); }
             $this->session->unset_userdata('receiving_submission_key');
             $this->cart->destroy();
             $this->session->set_flashdata('supervisor_result','Solicitud #'.$id.' enviada al supervisor. El inventario sigue sin cambios.');

@@ -4,12 +4,21 @@ on:
     paths:
       - 'application/**'
       - 'tests/**'
+      - 'assets/js/samypos-push.js'
+      - 'samypos-push-events.js'
+      - 'upup.sw.min.js'
+      - 'manifest.webmanifest'
       - '.github/workflows/supervisor-php.yml'
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: curl, mbstring, openssl, phar, zlib
+          coverage: none
       - name: Validate modified PHP files
         run: |
           php -l application/controllers/Receivings.php
@@ -36,3 +45,13 @@ jobs:
         run: php tests/supervisor_receiving.php
       - name: Verify recipient selection and failed email retry
         run: php tests/receiving_notifications.php
+      - name: Verify web push and shared service worker
+        run: |
+          php -l application/controllers/Push.php
+          php -l application/models/Receiving_push.php
+          php -l application/migrations/20261007123000_receiving_push.php
+          php -l application/views/push_settings.php
+          php tests/receiving_push.php
+          node --check assets/js/samypos-push.js
+          node --check upup.sw.min.js
+          node tests/push_worker.js

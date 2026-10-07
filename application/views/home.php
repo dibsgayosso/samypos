@@ -555,6 +555,7 @@ if (!is_on_demo_host() && !$this->config->item('hide_test_mode_home') && !$this-
 (function(){var busy=false;setInterval(function(){if(busy||document.hidden)return;busy=true;
 jQuery.get(<?php echo json_encode(site_url('home/my_receiving_requests')); ?>).done(function(html){jQuery('#my-receiving-requests').html(html);}).always(function(){busy=false;});},30000);})();
 </script>
+<?php if (!empty($can_supervise) || $this->Employee->has_module_permission('config',$this->session->userdata('person_id'))) { $this->load->view('push_settings'); } ?>
 <?php if (!empty($can_supervise)) { ?>
 <div id="supervisor-panel"><?php $this->load->view('supervisor_panel'); ?></div>
 <script>

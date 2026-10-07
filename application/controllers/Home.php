@@ -188,9 +188,9 @@ class Home extends Secure_area
         $can_review=$this->can_supervise();
         if (!$can_review && (int)$request['employee_id']!==(int)$employee) { show_error('Sin permiso',403); return; }
         $this->load->model('Supplier');
-        $this->load->model('Receiving_notifications');
+        $this->load->model('Receiving_push');
         $this->load->view('receiving_request',array('request'=>$request,
-            'notification_status'=>$this->Receiving_notifications->summary($request['id']),
+            'notification_status'=>$this->Receiving_push->summary($request['id']),
             'request_employee'=>$this->Employee->get_info($request['employee_id']),
             'request_supplier'=>$this->Supplier->get_info($request['supplier_id'] ?: -1),
             'can_authorize_request'=>$can_review && (int)$request['employee_id']!==(int)$employee,
