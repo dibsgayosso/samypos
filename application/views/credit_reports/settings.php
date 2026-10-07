@@ -3,6 +3,23 @@
 <?php if ($notice=$this->session->flashdata('credit_report_result')) { ?><div class="alert alert-info" role="status"><?php echo html_escape($notice); ?></div><?php } ?>
 <p>Recibe un PDF con los créditos de tus sucursales autorizadas, variación frente a 7 días antes y documentos con más de 30 días de atraso.</p>
 <p>Correo del propietario: <strong><?php echo html_escape($email ?: 'Configura tu correo en Empleados'); ?></strong>. El informe se enviará al correo registrado en tu cuenta.</p>
+<div style="margin:15px 0" id="credit-mail-tests">
+ <button type="button" class="btn btn-default" data-credit-test="connection">Probar conexión y correo</button>
+ <button type="button" class="btn btn-primary" data-credit-test="report">Enviar reporte PDF de prueba</button>
+ <p class="text-muted">Las pruebas se envían únicamente a tu correo registrado y no modifican la programación. Guarda primero tus ajustes del correo.</p>
+ <p id="credit-test-status" role="status" aria-live="polite"></p>
+</div>
+<script>
+(function(){var busy=false;var buttons=jQuery('[data-credit-test]');
+ buttons.on('click',function(){if(busy)return;busy=true;buttons.prop('disabled',true);
+ var kind=this.getAttribute('data-credit-test');var status=jQuery('#credit-test-status');
+ status.removeClass('text-danger text-success').text(kind==='report'?'Generando PDF y enviando prueba…':'Probando conexión y envío de correo…');
+ jQuery.ajax({url:<?php echo json_encode(site_url('creditreports/test')); ?>+'/'+kind,type:'POST',dataType:'json',data:{token:<?php echo json_encode($token); ?>}})
+ .done(function(result){status.addClass(result.success?'text-success':'text-danger').text(result.message);})
+ .fail(function(xhr){status.addClass('text-danger').text(xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'No se pudo completar la prueba. Revisa la conexión o recarga la página.');})
+ .always(function(){busy=false;buttons.prop('disabled',false);});
+ });})();
+</script>
 <?php if (!$ready) { ?><div class="alert alert-warning">Aplica la migración de informes de crédito para programar los envíos.</div><?php } else { ?>
 <?php echo form_open('creditreports/save'); ?>
 <input type="hidden" name="token" value="<?php echo html_escape($token); ?>">

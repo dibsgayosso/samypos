@@ -79,6 +79,43 @@ class Credit_reports extends CI_Model {
   }
   return $pdf->Output('creditos.pdf','S');
  }
+ protected function prepare_email($recipient,$validate=FALSE) {
+  $provider=$this->config->item('email_provider');
+  if ($validate) {
+   if ($provider==='Gmail API') {
+    foreach (array('gmail_client_id','gmail_client_secret','gmail_api_token') as $key) if (!$this->config->item($key)) throw new RuntimeException('Conecta Gmail API en Configuración → Ajustes del correo electrónico.');
+   } else {
+    if ($this->config->item('protocol')!=='smtp') throw new RuntimeException('Selecciona el protocolo SMTP en los ajustes del correo.');
+    foreach (array('smtp_host','smtp_user','smtp_pass','smtp_port') as $key) if (!$this->config->item($key)) throw new RuntimeException('Completa servidor, usuario, contraseña de aplicación y puerto SMTP.');
+   }
+  }
+  $from=$this->config->item('smtp_user');
+  if (!filter_var($from,FILTER_VALIDATE_EMAIL) && $provider==='Gmail API') $from=$this->Location->get_info_for_key('email');
+  if (!filter_var($from,FILTER_VALIDATE_EMAIL)) throw new RuntimeException('Configura un correo remitente válido.');
+  $this->load->library('email'); $this->email->clear(TRUE);
+  // MY_Email's inherited clear does not reset Gmail API attachments.
+  if (property_exists($this->email,'gmail_api_data')) $this->email->gmail_api_data=array();
+  $this->email->initialize(array('mailtype'=>'html','charset'=>'utf-8'));
+  $this->email->from($from,$this->config->item('company')); $this->email->to($recipient);
+ }
+ public function send_test($person,$kind) {
+  if (!in_array($kind,array('connection','report'),TRUE)) throw new RuntimeException('Prueba inválida.');
+  $scope=$this->scope($person); $employee=$this->Employee->get_info($person);
+  if (!$scope || !filter_var($employee->email,FILTER_VALIDATE_EMAIL)) throw new RuntimeException('Configura tu correo en Empleados y el permiso de propietario.');
+  $recipient=$employee->email; $pdf=NULL; $report=NULL;
+  // Validate configuration before generating a potentially large PDF.
+  $this->prepare_email($recipient,TRUE);
+  if ($kind==='report') {
+   $report=$this->capture($person); $pdf=$this->pdf($report);
+   if (array_diff($report['scope'],$this->scope($person))) throw new RuntimeException('Cambió tu acceso a las sucursales. Recarga la página.');
+  }
+  if (!$this->scope($person) || strcasecmp($recipient,$this->Employee->get_info($person)->email)!==0) throw new RuntimeException('Cambió tu cuenta o correo. Recarga la página.');
+  $this->email->subject($kind==='report'?'PRUEBA · Reporte de créditos por sucursal':'PRUEBA · Conexión de correo SAMYPOS');
+  $this->email->message($kind==='report'?'<p>Este es un informe de prueba con los datos actuales de tus sucursales autorizadas. No cambia tu programación automática.</p>':'<p>Este correo confirma que SAMYPOS pudo conectar con el proveedor y enviar un mensaje a tu cuenta.</p>');
+  if ($pdf!==NULL) $this->email->attach($pdf,'attachment','prueba-creditos.pdf','application/pdf');
+  if (!$this->email->send()) throw new RuntimeException('El proveedor no aceptó el correo. Revisa credenciales, conexión y permisos de Gmail en los ajustes del correo.');
+  return $kind==='report'?'Reporte PDF aceptado por el proveedor. Revisa tu bandeja de entrada y spam.':'Correo de prueba aceptado por el proveedor. Revisa tu bandeja de entrada y spam.';
+ }
  public function run() {
   if (!$this->ready()) return 0;
   // Single worker per database. An interrupted process releases its connection lock.
@@ -114,10 +151,7 @@ class Credit_reports extends CI_Model {
      if (!$current || !$current['enabled'] || $current['revision']!=$job['revision'] || array_diff($report['scope'],$this->scope($job['person_id'])) || strcasecmp($current_employee->email,$job['recipient'])!==0) {
       $this->db->where('id',$job['id'])->update('credit_report_jobs',array('status'=>'canceled')); continue;
      }
-     $from=$this->config->item('smtp_user');
-     if (!filter_var($from,FILTER_VALIDATE_EMAIL)) throw new RuntimeException('Configura el remitente SMTP.');
-     $this->load->library('email'); $this->email->clear(TRUE); $this->email->initialize(array('mailtype'=>'html','charset'=>'utf-8'));
-     $this->email->from($from,$this->config->item('company')); $this->email->to($job['recipient']); $this->email->subject('Créditos por sucursal · '.$report['captured']);
+     $this->prepare_email($job['recipient']); $this->email->subject('Créditos por sucursal · '.$report['captured']);
      $this->email->message('<p>Adjuntamos el informe de créditos, comparación semanal y documentos con más de 30 días de atraso.</p><p>Generado automáticamente para Samy y programado por Secoyt.</p>');
      $this->email->attach($pdf,'attachment','creditos-'.substr($report['captured'],0,10).'.pdf','application/pdf'); $ok=$this->email->send();
     } catch (Throwable $error) { log_message('error','Credit report generation or SMTP delivery failed.'); }
