@@ -1,20 +1,21 @@
-# Supervisión de sucursal
+# Autorización obligatoria de mercancía
 
-Aplicar la migración `20261007053000_receiving_supervisor` desde el actualizador del sistema (`index.php/migrate`). Respaldar la base antes de actualizar. Asignar en Empleados → permisos de Recepciones → Autorizar recepciones de mercancía únicamente a supervisores. El permiso no se concede automáticamente.
+El empleado captura y pulsa **Enviar a autorización**. La solicitud se guarda en `receiving_requests`, separada de los recibos que mueven inventario. No agrega existencias, series, costos, precios, deuda al proveedor ni facturas. No aparece como recepción completada en reportes.
 
-El inicio muestra pagos de hoy por cada método configurado (incluye transferencias y tarjetas), operaciones e importes; última venta completada de la sucursal; gastos del día con impuestos; y todas las recepciones pendientes. La cola se refresca cada 30 segundos mientras el inicio está visible. La tabla existente de pagos se actualiza al cargar la página.
+El supervisor recibe el aviso en Home, abre **Revisar mercancía** y compara productos, cantidades, equivalencias por empaque, series, caducidad y costos con la mercancía física. Autorizar aplica el recibo nativo de SAMYPOS una sola vez dentro de la misma transacción que guarda supervisor, fecha y vínculo al recibo. Rechazar exige motivo y no modifica inventario. El panel se actualiza cada 30 segundos mientras Home está visible.
 
-Solo nuevos recibos completados o recibos editados con cantidad neta positiva requieren autorización. Pedidos suspendidos, órdenes de compra y pagos de cuenta quedan excluidos. Los recibos históricos no se ponen pendientes al migrar. El inventario conserva el movimiento al recibir; esta función es una revisión posterior, no una reserva de inventario.
+## Activación
 
-Cada edición reinicia la revisión y aumenta la versión. La autorización es POST, valida permiso y token de sesión, limita la sucursal y usa una actualización condicional en transacción para evitar autorizaciones duplicadas o de una versión desactualizada. `receiving_authorizations` guarda recibo, versión, supervisor y fecha. No se elimina este historial al revertir la migración.
+Respaldar la base y aplicar `20261007053000_receiving_supervisor` desde `index.php/migrate/start`. Asignar acceso a Recepciones y el permiso **Autorizar recepciones de mercancía** únicamente a los supervisores. El permiso no se concede automáticamente. Todos los empleados, incluidos supervisores, envían primero una solicitud; la autorización es una acción aparte.
 
-## Validación en un entorno de prueba
+El bloqueo se aplica en `Receiving::save`, por lo que la confirmación directa, API/importaciones y recepciones parciales no pueden aplicar mercancía sin pasar por el servicio de autorización. Si la migración falta, el flujo falla cerrado. Los borradores y órdenes suspendidas con cantidad recibida cero siguen guardándose, sin actualizar inventario, precios ni series. Las APIs de confirmación devuelven 403 e indican enviar la solicitud desde Recepciones. Los pagos genuinos a cuenta del proveedor conservan su flujo y no permiten camuflar líneas de mercancía.
 
-1. Aplicar la migración dos veces y confirmar que no falla.
-2. Recibir mercancía: aparece pendiente en la sucursal correcta. Confirmar inventario una sola vez.
-3. Autorizar con supervisor: desaparece de pendientes y aparece auditoría en SQL.
-4. Editar el recibo: vuelve a pendientes; una autorización con la versión anterior se rechaza.
-5. Intentar autorizar con usuario sin permiso, otra sucursal, GET o sin token: se rechaza.
-6. Comparar pagos combinados y gastos con los reportes del mismo día.
+Las solicitudes enviadas son inmutables. Un borrador guardado solo puede originar una solicitud. Para corregir una rechazada, capturar una nueva solicitud. No se permite usar este flujo para editar recibos previamente aplicados: deben corregirse con una devolución documentada, también sujeta a autorización. Anular mercancía ya aplicada exige permiso de supervisor. Los recibos históricos permanecen intactos.
 
-No se dispone de la base de datos del servidor para verificar la integración en producción.
+El inventario se aplica con actualizaciones locales síncronas. Se omiten los webhooks externos del recibo durante esta transacción, evitando enviar eventos de una operación que después pudiera revertirse; una sincronización externa posterior requerirá una cola de eventos confirmados.
+
+## Verificación
+
+`php tests/supervisor_receiving.php` valida bloqueos en el servidor, intento de inyectar autorización, recepción parcial, cambio fraudulento de modo, permisos, sucursal, versión desactualizada, reversión ante fallo y aprobación duplicada. La prueba de aplicación usa un doble del servicio de inventario y no sustituye una prueba con la base real. Se verifica sintaxis PHP de todos los archivos modificados y se incluyen comprobaciones en GitHub Actions.
+
+Antes de producción, probar con una copia de la base: enviar una solicitud y confirmar que cantidades/costos/saldo/series no cambien; revisar y autorizar con otro usuario; comparar el inventario y el saldo resultantes con el recibo; repetir el POST de autorización sin duplicar movimientos; rechazar una solicitud; intentar confirmar por API o recibir parcialmente; probar productos con variantes, empaques, series, moneda extranjera y transferencias entre sucursales autorizadas. Confirmar que las tablas afectadas usen InnoDB para permitir reversión transaccional.

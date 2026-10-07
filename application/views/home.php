@@ -1,6 +1,7 @@
 <?php $this->load->view("partial/header"); 
 $this->load->helper('demo');
 ?>
+<?php if ($supervisor_result=$this->session->flashdata('supervisor_result')) { ?><div class="alert alert-info" role="status"><?php echo html_escape($supervisor_result); ?></div><?php } ?>
 
 		<?php
 		if(isset($announcement))

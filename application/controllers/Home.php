@@ -161,16 +161,13 @@ class Home extends Secure_area
         $this->output->set_header('Cache-Control: no-store');
         $this->load->view('supervisor_panel',$this->supervisor_data());
     }
-    public function authorize_receiving()
+    public function receiving_request($id)
     {
-        if ($this->input->method(TRUE) !== 'POST' || !$this->can_supervise()) { show_error('Sin permiso',403); return; }
-        $token=$this->input->post('supervisor_token');
-        if (!is_string($token) || !$this->session->userdata('supervisor_token') || !hash_equals($this->session->userdata('supervisor_token'),$token)) { show_error('Solicitud inválida',403); return; }
+        if (!$this->can_supervise()) { show_error('Sin permiso',403); return; }
         $this->load->model('Supervisor_dashboard');
-        $ok=$this->Supervisor_dashboard->authorize((int)$this->input->post('receiving_id'),(int)$this->input->post('revision'),
-            $this->Employee->get_logged_in_employee_current_location_id(),$this->Employee->get_logged_in_employee_info()->person_id);
-        $this->session->set_flashdata('supervisor_result',$ok ? 'Recepción autorizada.' : 'La recepción cambió o ya fue autorizada. Revisa de nuevo.');
-        redirect('home');
+        $request=$this->Supervisor_dashboard->detail((int)$id,$this->Employee->get_logged_in_employee_current_location_id());
+        if (!$request) { show_404(); return; }
+        $this->load->view('receiving_request',array('request'=>$request,'supervisor_token'=>$this->supervisor_data()['supervisor_token']));
     }
 
 function index($choose_location=0)

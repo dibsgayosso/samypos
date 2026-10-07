@@ -4,18 +4,17 @@ class Migration_receiving_supervisor extends MY_Migration
 {
     public function up()
     {
-        $this->load->dbforge();
-        if (!$this->db->field_exists('supervisor_status', 'receivings')) {
-            $this->dbforge->add_column('receivings', array(
-                'supervisor_status' => array('type'=>'VARCHAR','constraint'=>20,'null'=>TRUE),
-                'supervisor_revision' => array('type'=>'INT','default'=>0)
-            ));
-        }
-        $table = $this->db->dbprefix('receiving_authorizations');
+        $table = $this->db->dbprefix('receiving_requests');
         $this->db->query("CREATE TABLE IF NOT EXISTS `$table` (
             id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-            receiving_id INT NOT NULL, revision INT NOT NULL, employee_id INT NOT NULL,
-            authorized_at DATETIME NOT NULL, UNIQUE KEY receipt_revision (receiving_id, revision)
+            location_id INT NOT NULL, employee_id INT NOT NULL, supplier_id INT NULL,
+            receiving_time DATETIME NOT NULL, total DECIMAL(23,10) NOT NULL,
+            supervisor_revision INT NOT NULL DEFAULT 1, status VARCHAR(20) NOT NULL DEFAULT 'pending',
+            cart_payload LONGTEXT NOT NULL, detail_json LONGTEXT NOT NULL,
+            authorized_by INT NULL, authorized_at DATETIME NULL, receiving_id INT NULL,
+            source_receiving_id INT NULL, rejection_reason TEXT NULL, UNIQUE KEY source_receipt (source_receiving_id),
+            submission_key VARCHAR(64) NOT NULL, UNIQUE KEY submission (submission_key),
+            KEY pending_branch (location_id,status,id)
         ) ENGINE=InnoDB");
         $this->db->query("INSERT IGNORE INTO ".$this->db->dbprefix('modules_actions')."
             (action_id,module_id,action_name_key,sort) VALUES
