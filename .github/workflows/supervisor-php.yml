@@ -62,3 +62,12 @@ jobs:
           php -l application/models/Register.php
           php -l application/migrations/20261007140000_owner_dashboard.php
           php tests/owner_dashboard.php
+      - name: Verify scheduled credit PDFs and weekly analysis
+        run: |
+          php -l application/models/Credit_reports.php
+          php -l application/controllers/Creditreports.php
+          php -l application/controllers/Creditreportmailer.php
+          php -l application/views/credit_reports/settings.php
+          php -l application/views/credit_reports/pdf.php
+          php -l application/migrations/20261007180000_credit_report_schedule.php
+          php tests/credit_reports.php

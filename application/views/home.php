@@ -4,6 +4,7 @@ $this->load->helper('demo');
 <?php if ($supervisor_result=$this->session->flashdata('supervisor_result')) { ?><div class="alert alert-info" role="status"><?php echo html_escape($supervisor_result); ?></div><?php } ?>
 
 <?php if (!empty($can_view_owner_dashboard)) { ?>
+<p><a class="btn btn-default" href="<?php echo site_url('creditreports'); ?>">Programar informe de créditos por correo</a></p>
 <div id="owner-dashboard"><?php $this->load->view('owner_panel'); ?></div>
 <script>
 (function(){var busy=false;setInterval(function(){

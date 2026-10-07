@@ -55,3 +55,21 @@ Los métodos conservan los nombres configurados y los pagos históricos. Se reut
 Las entradas son recepciones aplicadas con cantidad recibida positiva y fecha del recibo de hoy; excluyen órdenes/borradores suspendidos, pagos a proveedores y devoluciones de mercancía. Una solicitud pendiente no se suma como entrada. El último corte se selecciona por fecha real de cierre, con ID como desempate; se reutiliza la fórmula nativa y se muestra su caja, empleado, fecha y hora. No se suman diferencias de cortes de fechas distintas en un falso total global.
 
 Cada sucursal calcula el día con su zona horaria configurada usando las convenciones de fechas existentes del POS. Las pruebas automatizadas no reemplazan una comparación con la base real: verificar cifras contra Reportes de ventas, recepciones, gastos, cuentas de clientes y cortes; incluir pago combinado, cambio, devolución, abono a crédito, clientes con saldo a favor, cierre de caja antiguo actualizado, sucursal sin actividad y permisos revocados. `php tests/owner_dashboard.php` valida consolidación, filtros, saldos, alcance de permisos, selección de cortes y escape de contenido.
+
+## Informe periódico de créditos por correo
+
+Aplicar `20261007180000_credit_report_schedule`. En Home del propietario abrir **Programar informe de créditos por correo**. Configurar el correo personal del propietario en Empleados, habilitar envío, elegir día, hora, zona horaria y frecuencia (cada 1, 2, 3 o 4 semanas). El primer envío es el próximo día seleccionado. Puede deshabilitarse desde la misma pantalla. **Descargar muestra en PDF** permite revisar el informe sin enviar correo.
+
+Configurar SMTP y un remitente válido en smtp_user. Añadir un cron cada minuto con la ruta real del sistema:
+
+```sh
+/usr/local/bin/php /RUTA/DEL/SISTEMA/index.php creditreportmailer cron
+```
+
+El cron solo admite CLI. Envía un PDF con secciones por sucursal autorizada: cartera actual, cartera hace 7 días, cambio absoluto y porcentual, saldos de clientes (incluidas cuentas liquidadas esta semana), y documentos abiertos con más de 30 días desde su vencimiento. Aunque se programe cada 2–4 semanas, la comparación siempre es contra 7 días antes. No compara contra cero si falta historial, ni divide entre cero. La referencia semanal se obtiene del último saldo en store_accounts anterior al corte de referencia, con sno para desempates. La atribución usa los clientes asignados actualmente a cada sucursal; reasignaciones o eliminaciones pueden cambiar el comparativo. Es una comparación del historial disponible, no un reconstruido de afiliaciones históricas.
+
+Los créditos sin fecha de vencimiento documentada no se clasifican como atraso. La sección vencida utiliza customer_invoices.due_date y su saldo pendiente, excluye documentos eliminados y distingue exactamente 30 de más de 30 días. Los abonos generales que no se hayan aplicado al documento pueden dejar su saldo pendiente; deben conciliarse antes de usar el reporte para cobranza. Un documento pertenece a su sucursal emisora, mientras el saldo de cliente sigue su sucursal asignada. Estos importes no se suman dos veces.
+
+Los informes se capturan con lectura consistente y se congelan en la cola antes de enviar. Se revalidan usuario activo, correo, permisos y sucursales justo antes de SMTP. Cambiar programación, deshabilitar, modificar correo o retirar acceso cancela entregas pendientes incompatibles. Una conexión obtiene el bloqueo de trabajador; el par propietario/ocurrencia es único. Los fallos reintentan hasta 10 veces con espera creciente. Una interrupción entre la aceptación SMTP y guardar sent puede repetir un correo; no modifica créditos. Si el servidor estuvo detenido, se genera un informe de recuperación, sin bombardear con todos los envíos omitidos. La hora efectiva depende de la ejecución del cron.
+
+No se han configurado SMTP ni envíos reales desde este entorno. Verificar PDF de muestra contra cuentas de clientes y documentos, comparar abonos parciales/liquidaciones, falta de historial, cero de referencia, plazos futuros y 30/31 días vencidos. Probar programación con una copia de la base y un correo autorizado antes de habilitar en producción. `php tests/credit_reports.php` comprueba calendario y cambios de horario, porcentajes, fronteras de atraso, escape y generación real del PDF.
