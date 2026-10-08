@@ -172,17 +172,25 @@ class Home extends Secure_area
         $this->load->model('Supervisor_dashboard');
         $location = $this->Employee->get_logged_in_employee_current_location_id();
         if (!$this->session->userdata('supervisor_token')) $this->session->set_userdata('supervisor_token',bin2hex(random_bytes(32)));
-        return array('supervisor_pending'=>$this->Supervisor_dashboard->pending($location),
-            'supervisor_activity'=>$this->Supervisor_dashboard->activity($location),
-            'supervisor_ready'=>$this->Supervisor_dashboard->ready(),
-            'supervisor_token'=>$this->session->userdata('supervisor_token'));
+        $debug=$this->db->db_debug; $this->db->db_debug=FALSE;
+        try {
+            $dashboard=$this->Supervisor_dashboard->snapshot($this->session->userdata('person_id'),function($id) {
+                return $this->get_today_payment_breakdown($id,TRUE);
+            });
+        } catch (Throwable $error) {
+            log_message('error','Supervisor dashboard failed: '.$error->getMessage());
+            $dashboard=array('error'=>TRUE);
+        } finally { $this->db->db_debug=$debug; }
+        return array('supervisor_dashboard'=>$dashboard,'supervisor_token'=>$this->session->userdata('supervisor_token'));
     }
     public function supervisor_panel()
     {
-        if (!$this->can_supervise()) { show_error('Sin permiso de supervisor',403); return; }
+        $this->load->model('Supervisor_dashboard');
+        if (!$this->Supervisor_dashboard->allowed_locations($this->session->userdata('person_id'))) { show_error('Sin permiso de supervisor',403); return; }
         $this->output->set_header('Cache-Control: no-store');
         $this->load->view('supervisor_panel',$this->supervisor_data());
     }
+
     public function my_receiving_requests()
     {
         $this->load->model('Supervisor_dashboard');
@@ -249,7 +257,8 @@ $this->load->model('Owner_dashboard');
 $data['can_view_owner_dashboard'] = (bool)$this->Owner_dashboard->allowed_locations($this->session->userdata('person_id'));
 if ($data['can_view_owner_dashboard']) $data['owner_dashboard'] = $this->owner_data();
 $data['can_supervise'] = $this->can_supervise();
-if ($data['can_supervise']) $data = array_merge($data,$this->supervisor_data());
+$data['can_view_supervisor_dashboard'] = (bool)$this->Supervisor_dashboard->allowed_locations($this->session->userdata('person_id'));
+if ($data['can_view_supervisor_dashboard']) $data = array_merge($data,$this->supervisor_data());
 $data['payment_breakdown'] = array();
 $data['last_register_close'] = FALSE;
 $data['can_view_register_difference'] = $this->Employee->has_module_action_permission('reports', 'view_register_difference', $this->Employee->get_logged_in_employee_info()->person_id);

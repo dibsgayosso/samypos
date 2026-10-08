@@ -2,6 +2,34 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 class Supervisor_dashboard extends CI_Model
 {
+    public function allowed_locations($person)
+    {
+        if (!$this->Employee->has_module_permission('receivings',$person)) return array();
+        $allowed=array();
+        foreach ($this->Employee->get_authenticated_location_ids($person) as $location) {
+            if ($this->Employee->has_module_action_permission('receivings','authorize_receivings',$person,$location)) $allowed[]=(int)$location;
+        }
+        return array_values(array_unique($allowed));
+    }
+    public function snapshot($person,$payment_loader)
+    {
+        $branches=array(); $zone=date_default_timezone_get();
+        try {
+            foreach ($this->allowed_locations($person) as $id) {
+                $location=$this->Location->get_info($id);
+                if (!$location || !$location->location_id || $location->deleted) continue;
+                $timezone=$location->timezone ?: $zone;
+                if (!in_array($timezone,timezone_identifiers_list(),TRUE)) $timezone=$zone;
+                date_default_timezone_set($timezone);
+                $activity=$this->activity($id);
+                $activity['last_sale_at']=$activity['last_sale'] ? strtotime($activity['last_sale']) : NULL;
+                $branches[]=array('id'=>$id,'name'=>$location->name,'day'=>date('d/m/Y'),
+                    'activity'=>$activity,'pending'=>$this->pending($id),
+                    'payments'=>call_user_func($payment_loader,$id));
+            }
+        } finally { date_default_timezone_set($zone); }
+        return array('branches'=>$branches,'ready'=>$this->ready());
+    }
     public function ready() { return $this->db->table_exists('receiving_requests'); }
     public function pending($location)
     {
@@ -90,7 +118,7 @@ class Supervisor_dashboard extends CI_Model
     public function activity($location)
     {
         $last = $this->db->select_max('sale_time','last_sale')->from('sales')->where('location_id',$location)
-            ->where('deleted',0)->where('suspended',0)->get()->row_array();
+            ->where('deleted',0)->where('suspended',0)->where('store_account_payment',0)->where('total >=',0)->get()->row_array();
         $expenses = $this->db->select('COUNT(*) AS operations, COALESCE(SUM(expense_amount),0) AS amount, COALESCE(SUM(expense_tax),0) AS tax',FALSE)
             ->from('expenses')->where('location_id',$location)->where('deleted',0)
             ->where('expense_date >=',date('Y-m-d 00:00:00'))->where('expense_date <',date('Y-m-d 00:00:00',strtotime('+1 day')))->get()->row_array();

@@ -92,3 +92,8 @@ php index.php migrate version 20261008063000
 La nueva migración vuelve a aplicar exclusivamente las cinco migraciones aditivas de supervisión, push y reportes de crédito. Usa `CREATE TABLE IF NOT EXISTS` e `INSERT IGNORE`: conserva datos, suscripciones y permisos concedidos, y no concede acceso automáticamente. No cambia estructuras existentes incompletas ni reconstruye datos. No reducir manualmente `phppos_migrations.version`. Una falla SQL debe detener la migración; CLI devuelve código 1. Verificar la versión impresa y revisar logs si falla.
 
 El panel del propietario registra fallos y presenta un aviso sin bloquear todo Home. Se corrigió el prefijo de categorías de gastos. Las pruebas incluyen el compilador SQL real de CodeIgniter, pero no sustituyen una prueba con la base MySQL del servidor ni una entrega push o correo real.
+
+
+### Panel visual del supervisor
+
+Home muestra el panel al inicio a quienes tienen acceso a Recepciones y autorización en al menos una sucursal accesible. Incluye tarjetas por sucursal, métodos de pago con sus nombres configurados, operaciones, gráfica de distribución positiva, gastos con impuestos, última venta de mercancía y solicitudes pendientes. Las devoluciones se conservan en los importes; abonos a crédito se excluyen de las ventas. Cada sucursal utiliza su fecha local. Se refresca cada 30 segundos. Revisar una solicitud de otra sucursal utiliza el flujo de cambio de sucursal ya existente y vuelve a validar los permisos antes de autorizar.

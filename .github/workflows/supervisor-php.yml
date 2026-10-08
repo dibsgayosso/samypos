@@ -42,7 +42,9 @@ jobs:
           php -l application/language/spanish/common_lang.php
           php -l application/language/english/common_lang.php
       - name: Verify server authorization guard and duplicate approval protection
-        run: php tests/supervisor_receiving.php
+        run: |
+          php tests/supervisor_receiving.php
+          php tests/supervisor_dashboard.php
       - name: Verify recipient selection and failed email retry
         run: php tests/receiving_notifications.php
       - name: Verify web push and shared service worker

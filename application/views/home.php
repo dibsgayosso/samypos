@@ -18,6 +18,25 @@ $this->load->helper('demo');
 </script>
 <?php } ?>
 
+<?php if (!empty($can_view_supervisor_dashboard)) { ?>
+<div id="supervisor-panel"><?php $this->load->view('supervisor_panel'); ?></div>
+<script>
+(function(){
+ var busy=false;
+ setInterval(function(){
+  if(busy || document.hidden) return;
+  busy=true;
+  var state={}; jQuery('#supervisor-panel details[data-branch]').each(function(){state[this.getAttribute('data-branch')]=this.open;});
+  jQuery.get(<?php echo json_encode(site_url('home/supervisor_panel')); ?>).done(function(html){
+   jQuery('#supervisor-panel').html(html);
+   jQuery('#supervisor-panel details[data-branch]').each(function(){var id=this.getAttribute('data-branch');if(Object.prototype.hasOwnProperty.call(state,id))this.open=state[id];});
+  }).fail(function(){jQuery('#supervisor-panel .sv-live').text('No se pudo actualizar. Reintentando…');}).always(function(){busy=false;});
+ },30000);
+})();
+</script>
+<?php } ?>
+
+
 		<?php
 		if(isset($announcement))
 		{
@@ -570,23 +589,7 @@ if (!is_on_demo_host() && !$this->config->item('hide_test_mode_home') && !$this-
 (function(){var busy=false;setInterval(function(){if(busy||document.hidden)return;busy=true;
 jQuery.get(<?php echo json_encode(site_url('home/my_receiving_requests')); ?>).done(function(html){jQuery('#my-receiving-requests').html(html);}).always(function(){busy=false;});},30000);})();
 </script>
-<?php if (!empty($can_supervise) || $this->Employee->has_module_permission('config',$this->session->userdata('person_id'))) { $this->load->view('push_settings'); } ?>
-<?php if (!empty($can_supervise)) { ?>
-<div id="supervisor-panel"><?php $this->load->view('supervisor_panel'); ?></div>
-<script>
-(function(){
- var busy=false;
- setInterval(function(){
-  if(busy || document.hidden) return;
-  busy=true;
-  jQuery.get(<?php echo json_encode(site_url('home/supervisor_panel')); ?>).done(function(html){
-   jQuery('#supervisor-panel').html(html);
-  }).always(function(){busy=false;});
- },30000);
-})();
-</script>
-<?php } ?>
-
+<?php if (!empty($can_view_supervisor_dashboard) || $this->Employee->has_module_permission('config',$this->session->userdata('person_id'))) { $this->load->view('push_settings'); } ?>
 <?php if (!empty($can_view_register_difference)) { ?>
 <div class="row">
 	<div class="col-md-12">
