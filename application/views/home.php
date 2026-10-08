@@ -593,7 +593,7 @@ if (!is_on_demo_host() && !$this->config->item('hide_test_mode_home') && !$this-
 (function(){var busy=false;setInterval(function(){if(busy||document.hidden)return;busy=true;
 jQuery.get(<?php echo json_encode(site_url('home/my_receiving_requests')); ?>).done(function(html){jQuery('#my-receiving-requests').html(html);}).always(function(){busy=false;});},30000);})();
 </script>
-<?php if (!empty($can_view_supervisor_dashboard) || $this->Employee->has_module_permission('config',$this->session->userdata('person_id'))) { ?><details class="owner-push-controls" style="margin:18px 0;padding:14px;border:1px solid #e2e8f0;border-radius:12px;background:white"><summary style="cursor:pointer;font-weight:600">Notificaciones de mercancía · Configurar y probar</summary><?php $this->load->view('push_settings'); ?></details><?php } ?>
+<?php if (!empty($can_view_supervisor_dashboard) || !empty($can_supervise) || $this->Employee->has_module_permission('config',$this->session->userdata('person_id'))) { ?><details class="owner-push-controls" style="margin:18px 0;padding:14px;border:1px solid #e2e8f0;border-radius:12px;background:white"><summary style="cursor:pointer;font-weight:600">Notificaciones de mercancía · Configurar y probar</summary><?php $this->load->view('push_settings'); ?></details><?php } ?>
 <?php if (empty($can_view_owner_dashboard)) { ?>
 <?php if (!empty($can_view_register_difference)) { ?>
 <div class="row">

@@ -4,10 +4,10 @@ class Supervisor_dashboard extends CI_Model
 {
     public function allowed_locations($person)
     {
-        if (!$this->Employee->has_module_permission('receivings',$person)) return array();
+        if (!$this->Employee->has_module_permission('reports',$person)) return array();
         $allowed=array();
         foreach ($this->Employee->get_authenticated_location_ids($person) as $location) {
-            if ($this->Employee->has_module_action_permission('receivings','authorize_receivings',$person,$location)) $allowed[]=(int)$location;
+            if ($this->Employee->has_module_action_permission('reports','view_supervisor_dashboard',$person,$location)) $allowed[]=(int)$location;
         }
         return array_values(array_unique($allowed));
     }
@@ -25,6 +25,7 @@ class Supervisor_dashboard extends CI_Model
                 $activity['last_sale_at']=$activity['last_sale'] ? strtotime($activity['last_sale']) : NULL;
                 $branches[]=array('id'=>$id,'name'=>$location->name,'day'=>date('d/m/Y'),
                     'activity'=>$activity,'pending'=>$this->pending($id),
+                    'can_authorize'=>$this->Employee->has_module_permission('receivings',$person) && $this->Employee->has_module_action_permission('receivings','authorize_receivings',$person,$id),
                     'payments'=>call_user_func($payment_loader,$id));
             }
         } finally { date_default_timezone_set($zone); }

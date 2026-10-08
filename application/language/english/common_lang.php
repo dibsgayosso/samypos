@@ -1326,3 +1326,5 @@ $lang['common_authorize_receivings'] = 'Authorize merchandise receipts';
 
 
 $lang['common_view_owner_dashboard'] = 'View owner dashboard';
+
+$lang['common_view_supervisor_dashboard'] = 'View supervisor dashboard';

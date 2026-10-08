@@ -102,3 +102,8 @@ Home muestra el panel al inicio a quienes tienen acceso a Recepciones y autoriza
 ### Panel ilustrativo del propietario
 
 Incluye tarjetas de totales, gráfica de métodos de pago, comparación por sucursal, tarjetas de entradas/créditos/gastos y diferencias del último corte sujetas al permiso existente. El detalle de gastos y pagos se despliega por sucursal. Las tarjetas históricas, bienvenida, accesos rápidos y gráficos antiguos de Home se ocultan para quien ve el panel del propietario; los controles push quedan plegados y siguen disponibles. No necesita otra migración.
+
+
+### Activar panel del supervisor desde Empleados
+
+Actualizar main y ejecutar `php index.php migrate version 20261008131000`. En Empleados → Editar usuario → Permisos → Reportes, marcar Ver panel del supervisor y las sucursales que puede consultar. Guardar. El permiso no se concede automáticamente ni depende de Autorizar recepciones. Para aprobar mercancía y recibir push, conservar Recepciones → Autorizar recepciones de mercancía y acceso al módulo. La autorización siempre se valida en el servidor.
