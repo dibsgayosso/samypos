@@ -37,6 +37,7 @@
 	    <span id="progress_percent">0</span>% <span id="progress_title"><?php echo lang('migrate_complete');?></span> <span id="progress_message"></span>
 	  </div>
 	</div>
+	<div id="migration_error" class="alert alert-danger" role="alert" style="display:none;"></div>
 	
   <a class="btn btn-default btn-lg pull-right" disabled href="<?php echo site_url('login'); ?>" id="login_to_pos" style="display:none;" role="button"><?php echo $is_new ? lang('migrate_login_to_new_pos') : lang('migrate_login_to_upgraded_pos');?> <span id="status_icon" class="glyphicon glyphicon-remove"></span></a>
 	
@@ -64,8 +65,18 @@ $("#upgrade_database").click(function()
 
 function migrate_one_step()
 {
-	$.getJSON(SITE_URL+'/migrate/migrate_one_step', function(response)
+	$.getJSON(SITE_URL+'/migrate/migrate_one_step').done(function(response)
 	{
+		if (!response || typeof response.success !== 'boolean' || typeof response.percent_complete !== 'number')
+		{
+			migration_failed('La actualización recibió una respuesta inesperada. Revisa la petición migrate_one_step en F12 → Red.');
+			return;
+		}
+		if (!response.success)
+		{
+			migration_failed(response.message || 'No se pudo completar la actualización de la base de datos.');
+			return;
+		}
 		set_progress(response.percent_complete,response.message);
 		all_messages.push(response.message);
 		
@@ -79,12 +90,24 @@ function migrate_one_step()
 			
 			for(var k = 0;k< all_messages.length;k++)
 			{
-				$("#all_messages").append('<li class="list-group-item">'+all_messages[k]+'</li>');
+				$("#all_messages").append($('<li class="list-group-item">').text(all_messages[k]));
 			}
 			
 			$("#all_messages_container").show();
 		}
+	}).fail(function(xhr, status)
+	{
+		var detail = xhr.status ? 'HTTP '+xhr.status : 'sin respuesta del servidor';
+		if (status === 'parsererror') detail += ', respuesta no válida';
+		migration_failed('La actualización se detuvo ('+detail+'). Revisa la petición migrate_one_step en F12 → Red y el registro de errores de cPanel. No vuelvas a iniciarla mientras haya una petición en curso.');
 	});
+}
+
+function migration_failed(message)
+{
+	$('#progessbar').removeClass('active progress-bar-striped').addClass('progress-bar-danger');
+	$('#migration_error').text(message).show();
+	$('#login_to_pos').hide();
 }
 
 function set_progress(percent,message)
@@ -94,7 +117,7 @@ function set_progress(percent,message)
 	$('#progress_percent').html(percent);
 	if (message !='')
 	{
-		$("#progress_message").html('('+message+')');
+		$("#progress_message").text('('+message+')');
 	}
 	else
 	{

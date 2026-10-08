@@ -112,9 +112,13 @@ class Migrate extends MY_Controller {
 			{
 				$name = basename($migration_to_run, '.php');
 				$version = $this->migration->get_migration_number($name);
-				$message = lang('migrate_'.substr($name,strpos($name,'_')+1));
+				$message = lang('migrate_'.substr($name,strpos($name,'_')+1)) ?: $name;
 				$percent_complete = floor(($number_of_migrations_completed/$total_migrations)*100);
-				$this->migration->version($version);
+				if ($this->migration->version($version) === FALSE)
+				{
+					$this->output->set_content_type('application/json')->set_output(json_encode(array('success'=>FALSE, 'has_next_step'=>FALSE, 'percent_complete'=>$percent_complete, 'message'=>'No se pudo aplicar la migración '.$name.'. Revisa el registro de errores del servidor.')));
+					return;
+				}
 				$this->_migrations_ran();
 				$has_next_step = TRUE;
 			}
