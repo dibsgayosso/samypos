@@ -17,6 +17,8 @@ class Migration_repair_supervision_schema extends MY_Migration
             $migration=new $class();
             $migration->up();
         }
+        // table_exists() uses a list cached before DDL by migration constructors.
+        unset($this->db->data_cache['table_names']);
         foreach (array('receiving_requests','receiving_notification_queue','webpush_settings',
             'webpush_subscriptions','webpush_queue','credit_report_schedules','credit_report_jobs') as $table) {
             if (!$this->db->table_exists($table)) throw new RuntimeException('Falta la tabla '.$table.'.');

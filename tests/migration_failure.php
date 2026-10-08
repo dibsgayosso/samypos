@@ -3,8 +3,11 @@ define('BASEPATH',__DIR__);
 function log_message($level,$message) {}
 function verify($ok,$message) { if (!$ok) throw new RuntimeException($message); }
 class MigrationTestDb {
-    public $fail=TRUE, $queries=array();
-    function table_exists($table) { return $table!=='app_config'; }
+    public $fail=TRUE, $queries=array(), $data_cache=array();
+    function table_exists($table) {
+        if ($table==='app_config') return FALSE;
+        return !isset($this->data_cache['table_names']) || in_array($table,$this->data_cache['table_names'],TRUE);
+    }
     function dbprefix($table) { return 'phppos_'.$table; }
     function query($sql) { $this->queries[]=$sql; return !$this->fail; }
 }
@@ -35,7 +38,9 @@ $GLOBALS['migration_db']->fail=FALSE;
 verify((string)$runner->version('20261007180000')==='20261007180000','Successful retry must advance normally');
 require dirname(__DIR__).'/application/migrations/20261008063000_repair_supervision_schema.php';
 $repair=new Migration_repair_supervision_schema();
+$GLOBALS['migration_db']->data_cache['table_names']=array('old_table');
 $repair->up(); $repair->up();
+verify(!isset($GLOBALS['migration_db']->data_cache['table_names']),'Repair must invalidate stale schema metadata before validating new tables');
 verify((string)$runner->get_version()==='20261007180000','Direct idempotent repair must not rewind migration version');
 $GLOBALS['migration_db']->fail=TRUE;
 $failed=FALSE;
