@@ -145,9 +145,16 @@ class Home extends Secure_area
     private function owner_data()
     {
         $this->load->model('Owner_dashboard');
-        return $this->Owner_dashboard->snapshot($this->session->userdata('person_id'),function($location) {
-            return $this->get_today_payment_breakdown($location,TRUE);
-        });
+        $debug=$this->db->db_debug;
+        $this->db->db_debug=FALSE;
+        try {
+            return $this->Owner_dashboard->snapshot($this->session->userdata('person_id'),function($location) {
+                return $this->get_today_payment_breakdown($location,TRUE);
+            });
+        } catch (Throwable $error) {
+            log_message('error','Owner dashboard failed: '.$error->getMessage());
+            return array('error'=>TRUE);
+        } finally { $this->db->db_debug=$debug; }
     }
     public function owner_panel()
     {

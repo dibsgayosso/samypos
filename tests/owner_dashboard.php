@@ -11,6 +11,7 @@ class OwnerEmployee {
 }
 class OwnerQuery {
     public $queries=array(),$current=array('where'=>array()),$ready=TRUE;
+    function dbprefix($table) { return 'phppos_'.$table; }
     function select($value,$escape=TRUE) { $this->current['select']=$value; return $this; }
     function from($table) { $this->current['table']=$table; return $this; }
     function join($table,$condition,$type='') { return $this; }
@@ -82,3 +83,7 @@ check(strpos($html,'Faltante')!==FALSE && strpos($html,'Transferencia: BBVA')!==
 ob_start(); require APPPATH.'language/spanish/common_lang.php'; $output=ob_get_clean();
 check($output==='' && $lang['common_authorize_receivings']==='Autorizar recepciones de mercancía' && $lang['common_view_owner_dashboard']==='Ver panel del propietario','Spanish permissions must load as PHP without stray output');
 echo "Owner dashboard permissions, consolidation, balances, cuts and rendering tests passed\n";
+
+$owner_dashboard=array('error'=>TRUE);
+ob_start(); require APPPATH.'views/owner_panel.php'; $failure_html=ob_get_clean();
+check(strpos($failure_html,'No se pudo cargar')!==FALSE,'Failed owner panel must render a visible recovery message');

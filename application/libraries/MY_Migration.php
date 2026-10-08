@@ -166,7 +166,16 @@ class MY_Migration extends CI_Migration
 			log_message('debug', 'Migrating '.$method.' from version '.$current_version.' to version '.$number);
 
 			$migration[0] = new $migration[0];
-			call_user_func($migration);
+			try {
+                if (call_user_func($migration) === FALSE) {
+                    $this->_error_string = 'Migration failed: '.get_class($migration[0]);
+                    return FALSE;
+                }
+            } catch (Throwable $error) {
+                $this->_error_string = $error->getMessage();
+                log_message('error', 'Migration failed: '.$error->getMessage());
+                return FALSE;
+            }
 			$current_version = $number;
 			$db_version = $this->_get_version();
 			
@@ -254,6 +263,7 @@ class MY_Migration extends CI_Migration
 					}
 				}
 			
+				if (!$result) throw new RuntimeException('SQL migration failed: '.mysqli_error($this->db->conn_id));
 				return TRUE;
 			}
 			else
@@ -285,8 +295,8 @@ class MY_Migration extends CI_Migration
 		}
 		catch(Exception $e)
 		{
-			echo 'ERROR: '.$e."\n";
-			return FALSE;
+			log_message('error', 'SQL migration failed: '.$e->getMessage());
+            throw $e;
 		}
 	}
 }

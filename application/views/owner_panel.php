@@ -1,5 +1,9 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
+if (!empty($owner_dashboard['error'])) {
+    echo '<div class="alert alert-danger" role="alert">No se pudo cargar el panel del propietario. Revisa el registro de errores y que estén aplicadas las migraciones. El resto de Home sigue disponible.</div>';
+    return;
+}
 $totals=$owner_dashboard['totals'];
 $elapsed=function($stamp) { return $stamp===NULL ? 'Sin ventas registradas' : 'Hace '.number_format(max(0,(int)floor((time()-$stamp)/60)),0,'.',',').' min'; };
 ?>

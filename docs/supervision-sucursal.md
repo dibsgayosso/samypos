@@ -79,3 +79,16 @@ No se han configurado SMTP ni envíos reales desde este entorno. Verificar PDF d
 En la pantalla **Programar informe de créditos por correo** aparecen **Probar conexión y correo** y **Enviar reporte PDF de prueba**. La primera verifica el envío completo enviando un mensaje sencillo al correo del propietario; la segunda genera y envía el PDF actual de las sucursales autorizadas. Ambas requieren un POST autenticado con token de sesión, se limitan a una prueba cada 30 segundos y no cambian fechas, frecuencia ni estado del envío automático. El destinatario se toma de Empleados, nunca del navegador. No muestran contraseñas, tokens ni contenido de depuración SMTP. “Aceptado por el proveedor” no garantiza llegada a la bandeja: revisar entrada y spam. Las pruebas necesitan configuración previamente guardada, y no activan el cron.
 
 Se soporta el SMTP configurado y Gmail API cuando ya está conectado en el POS; para API se requiere el correo remitente de la sucursal si no hay smtp_user. Se limpia la colección de adjuntos de Gmail API antes de cada mensaje para impedir que se agreguen PDFs de un envío anterior. No se ejecutaron pruebas con cuentas o correos reales desde este entorno.
+
+
+### Reparar instalaciones con migración registrada pero tablas faltantes
+
+Actualizar el código completo de `main`, incluida `application/config/migration.php`, y ejecutar desde la raíz del sitio correcto:
+
+```bash
+php index.php migrate version 20261008063000
+```
+
+La nueva migración vuelve a aplicar exclusivamente las cinco migraciones aditivas de supervisión, push y reportes de crédito. Usa `CREATE TABLE IF NOT EXISTS` e `INSERT IGNORE`: conserva datos, suscripciones y permisos concedidos, y no concede acceso automáticamente. No cambia estructuras existentes incompletas ni reconstruye datos. No reducir manualmente `phppos_migrations.version`. Una falla SQL debe detener la migración; CLI devuelve código 1. Verificar la versión impresa y revisar logs si falla.
+
+El panel del propietario registra fallos y presenta un aviso sin bloquear todo Home. Se corrigió el prefijo de categorías de gastos. Las pruebas incluyen el compilador SQL real de CodeIgniter, pero no sustituyen una prueba con la base MySQL del servidor ni una entrega push o correo real.

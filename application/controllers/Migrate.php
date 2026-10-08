@@ -153,6 +153,11 @@ class Migrate extends MY_Controller {
       if($this->input->is_cli_request())
       {
          $migration = $this->migration->version($version);
+         if ($migration === FALSE) {
+             fwrite(STDERR, 'Migración fallida: '.$this->migration->error_string()."\n");
+             exit(1);
+         }
+         echo 'Versión de base de datos: '.$this->migration->get_version()."\n";
       }
   }
 }

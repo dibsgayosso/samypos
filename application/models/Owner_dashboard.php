@@ -66,7 +66,7 @@ class Owner_dashboard extends CI_Model
                 ->where('location_id',$id)->where('status','pending')->get()->row_array();
             $result['pending_count']=(int)$pending['operations']; $result['pending_total']=(float)$pending['amount'];
         }
-        $expenses=$this->db->select('COALESCE(expenses_categories.name, \'Sin categoría\') AS category, COUNT(*) AS operations, COALESCE(SUM(expense_amount+expense_tax),0) AS amount',FALSE)
+        $expenses=$this->db->select('COALESCE('.$this->db->dbprefix('expenses_categories').'.name, \'Sin categoría\') AS category, COUNT(*) AS operations, COALESCE(SUM(expense_amount+expense_tax),0) AS amount',FALSE)
             ->from('expenses')->join('expenses_categories','expenses_categories.id=expenses.category_id','left')->where('expenses.location_id',$id)->where('expenses.deleted',0)
             ->where('expense_date >=',$day[0])->where('expense_date <',$day[1])->group_by('expenses.category_id')->group_by('expenses_categories.name')->get()->result_array();
         $result['expenses']=$expenses;
