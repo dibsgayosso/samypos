@@ -32,7 +32,7 @@ class Home extends Secure_area
 
 		}
 
-        private function get_today_payment_breakdown($location_id)
+        private function get_today_payment_breakdown($location_id,$merchandise_only=FALSE)
         {
             $start = date('Y-m-d 00:00:00');
             $end = date('Y-m-d 00:00:00', strtotime('+1 day'));
@@ -43,6 +43,7 @@ class Home extends Secure_area
             $this->db->where('sale_time <', $end);
             $this->db->where('deleted', 0);
             $this->db->where('suspended', 0);
+            if ($merchandise_only) $this->db->where('store_account_payment',0);
             $sales = $this->db->get()->result_array();
             $sales_totals = array();
             $sales_total = 0;
@@ -141,6 +142,76 @@ class Home extends Secure_area
 		return array('labels' => $labels, 'totals' => $totals);
 		}
 
+    private function owner_data()
+    {
+        $this->load->model('Owner_dashboard');
+        return $this->Owner_dashboard->snapshot($this->session->userdata('person_id'),function($location) {
+            return $this->get_today_payment_breakdown($location,TRUE);
+        });
+    }
+    public function owner_panel()
+    {
+        $this->load->model('Owner_dashboard');
+        if (!$this->Owner_dashboard->allowed_locations($this->session->userdata('person_id'))) { show_error('Sin permiso del panel de propietario',403); return; }
+        $this->output->set_header('Cache-Control: no-store');
+        $this->load->view('owner_panel',array('owner_dashboard'=>$this->owner_data()));
+    }
+    private function can_supervise()
+    {
+        return $this->Employee->has_module_action_permission('receivings','authorize_receivings',$this->Employee->get_logged_in_employee_info()->person_id);
+    }
+    private function supervisor_data()
+    {
+        $this->load->model('Supervisor_dashboard');
+        $location = $this->Employee->get_logged_in_employee_current_location_id();
+        if (!$this->session->userdata('supervisor_token')) $this->session->set_userdata('supervisor_token',bin2hex(random_bytes(32)));
+        return array('supervisor_pending'=>$this->Supervisor_dashboard->pending($location),
+            'supervisor_activity'=>$this->Supervisor_dashboard->activity($location),
+            'supervisor_ready'=>$this->Supervisor_dashboard->ready(),
+            'supervisor_token'=>$this->session->userdata('supervisor_token'));
+    }
+    public function supervisor_panel()
+    {
+        if (!$this->can_supervise()) { show_error('Sin permiso de supervisor',403); return; }
+        $this->output->set_header('Cache-Control: no-store');
+        $this->load->view('supervisor_panel',$this->supervisor_data());
+    }
+    public function my_receiving_requests()
+    {
+        $this->load->model('Supervisor_dashboard');
+        $this->output->set_header('Cache-Control: no-store');
+        $this->load->view('my_receiving_requests',array('my_receiving_requests'=>$this->Supervisor_dashboard->own_requests(
+            $this->Employee->get_logged_in_employee_current_location_id(),$this->Employee->get_logged_in_employee_info()->person_id)));
+    }
+    public function receiving_request($id)
+    {
+        $this->load->model('Supervisor_dashboard');
+        $employee=$this->Employee->get_logged_in_employee_info()->person_id;
+        $request=$this->Supervisor_dashboard->detail((int)$id,$this->Employee->get_logged_in_employee_current_location_id());
+        if (!$request && $this->Supervisor_dashboard->ready()) {
+            // An authenticated email review link may select a branch the supervisor is allowed to oversee.
+            $other=$this->db->get_where('receiving_requests',array('id'=>(int)$id))->row_array();
+            if ($other && in_array($other['location_id'],$this->Employee->get_authenticated_location_ids($employee))
+                && $this->Employee->has_module_permission('receivings',$employee)
+                && $this->Employee->has_module_action_permission('receivings','authorize_receivings',$employee,$other['location_id'])) {
+                $this->Employee->set_employee_current_location_id($other['location_id']);
+                $this->Employee->set_employee_current_register_id(NULL);
+                redirect('home/receiving_request/'.(int)$id); return;
+            }
+        }
+        if (!$request) { show_404(); return; }
+        $can_review=$this->can_supervise();
+        if (!$can_review && (int)$request['employee_id']!==(int)$employee) { show_error('Sin permiso',403); return; }
+        $this->load->model('Supplier');
+        $this->load->model('Receiving_push');
+        $this->load->view('receiving_request',array('request'=>$request,
+            'notification_status'=>$this->Receiving_push->summary($request['id']),
+            'request_employee'=>$this->Employee->get_info($request['employee_id']),
+            'request_supplier'=>$this->Supplier->get_info($request['supplier_id'] ?: -1),
+            'can_authorize_request'=>$can_review && (int)$request['employee_id']!==(int)$employee,
+            'supervisor_token'=>$can_review ? $this->supervisor_data()['supervisor_token'] : ''));
+    }
+
 function index($choose_location=0)
 {
 		require_once (APPPATH.'models/reports/Report.php');
@@ -165,6 +236,13 @@ $data['saved_reports'] = Report::get_saved_reports();
 
 $current_location = $this->Location->get_info($this->Employee->get_logged_in_employee_current_location_id());
 $current_location_id = $this->Employee->get_logged_in_employee_current_location_id();
+$this->load->model('Supervisor_dashboard');
+$data['my_receiving_requests'] = $this->Supervisor_dashboard->own_requests($current_location_id,$this->Employee->get_logged_in_employee_info()->person_id);
+$this->load->model('Owner_dashboard');
+$data['can_view_owner_dashboard'] = (bool)$this->Owner_dashboard->allowed_locations($this->session->userdata('person_id'));
+if ($data['can_view_owner_dashboard']) $data['owner_dashboard'] = $this->owner_data();
+$data['can_supervise'] = $this->can_supervise();
+if ($data['can_supervise']) $data = array_merge($data,$this->supervisor_data());
 $data['payment_breakdown'] = array();
 $data['last_register_close'] = FALSE;
 $data['can_view_register_difference'] = $this->Employee->has_module_action_permission('reports', 'view_register_difference', $this->Employee->get_logged_in_employee_info()->person_id);
@@ -176,7 +254,7 @@ $data['current_location_name'] = $current_location->name;
 $data['location_sales'] = $this->get_today_location_sales();
 $data['message']  = "";
 		
-		if ($this->Employee->has_module_action_permission('reports', 'view_dashboard_stats', $this->Employee->get_logged_in_employee_info()->person_id))
+		if ($data['can_supervise'] || $this->Employee->has_module_action_permission('reports', 'view_dashboard_stats', $this->Employee->get_logged_in_employee_info()->person_id))
 		{	
 			$data['payment_breakdown'] = $this->get_today_payment_breakdown($current_location_id);
 			$data['month_sale'] = $this->sales_widget();

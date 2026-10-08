@@ -251,6 +251,7 @@ class Register extends MY_Model
 		$this->db->where('registers.location_id', $location_id);
 		$this->db->where('register_log.deleted', 0);
 		$this->db->where('register_log.shift_end !=', '0000-00-00 00:00:00');
+		$this->db->order_by('register_log.shift_end', 'DESC');
 		$this->db->order_by('register_log.register_log_id', 'DESC');
 		$this->db->limit(1);
 		$query = $this->db->get();

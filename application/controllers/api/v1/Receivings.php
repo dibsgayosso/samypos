@@ -222,6 +222,10 @@ class Receivings extends REST_Controller {
 			$this->cart->skip_webhook = isset($sale_request['skip_webhook']) && $sale_request['skip_webhook'] ? TRUE : FALSE;
 			
 			$receiving_id = $this->Receiving->save($this->cart,false);
+            if ($receiving_id < 1) {
+                $this->response(array('error'=>'La mercancía requiere autorización del supervisor. Envía la solicitud desde Recepciones; no se aplicó inventario.'), REST_Controller::HTTP_FORBIDDEN);
+                return;
+            }
 			$response = $this->recv_id_to_array($receiving_id);
 			$this->response($response, REST_Controller::HTTP_OK);
 			
@@ -233,7 +237,10 @@ class Receivings extends REST_Controller {
   		
   		if ($receiving && $receiving->receiving_id && !$receiving->deleted)
   		{
-				$this->Receiving->delete($receiving->receiving_id);
+				if (!$this->Receiving->delete($receiving->receiving_id)) {
+                    $this->response(array('error'=>'Se requiere permiso del supervisor para anular mercancía aplicada.'),REST_Controller::HTTP_FORBIDDEN);
+                    return;
+                }
 				$response = $this->recv_id_to_array($receiving->receiving_id);
 				$this->response($response, REST_Controller::HTTP_OK);
 			}

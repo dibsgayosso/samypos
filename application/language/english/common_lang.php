@@ -1322,4 +1322,7 @@ $lang['common_customer_purchase_history'] = 'Customer Purchase History';
 $lang['common_item_unit_selling_price'] = 'Item Unit Selling Price';
 $lang['common_item_unit_discount_percent'] = 'Item Unit Discount Percent';
 $lang['common_use_this_price'] = 'Use this Price';
-?>
+$lang['common_authorize_receivings'] = 'Authorize merchandise receipts';
+
+
+$lang['common_view_owner_dashboard'] = 'View owner dashboard';

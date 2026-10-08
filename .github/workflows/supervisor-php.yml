@@ -1,0 +1,73 @@
+name: Supervisor authorization checks
+on:
+  pull_request:
+    paths:
+      - 'application/**'
+      - 'tests/**'
+      - 'assets/js/samypos-push.js'
+      - 'samypos-push-events.js'
+      - 'upup.sw.min.js'
+      - 'manifest.webmanifest'
+      - '.github/workflows/supervisor-php.yml'
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: curl, mbstring, openssl, phar, zlib
+          coverage: none
+      - name: Validate modified PHP files
+        run: |
+          php -l application/controllers/Receivings.php
+          php -l application/controllers/api/v1/Receivings.php
+          php -l application/views/receivings/receiving.php
+          php -l application/views/receiving_request.php
+          php -l application/controllers/Receivingnotifications.php
+          php -l application/models/Receiving_notifications.php
+          php -l application/migrations/20261007060000_receiving_notifications.php
+          php -l application/views/my_receiving_requests.php
+          php -l application/views/receivings/authorization_stamp.php
+          php -l application/views/receivings/receipt.php
+          php -l application/views/receivings/receipt_html.php
+          php -l application/views/receivings/receipt_email.php
+          php -l application/controllers/Home.php
+          php -l application/models/Receiving.php
+          php -l application/models/Supervisor_dashboard.php
+          php -l application/views/home.php
+          php -l application/views/supervisor_panel.php
+          php -l application/migrations/20261007053000_receiving_supervisor.php
+          php -l application/language/spanish/common_lang.php
+          php -l application/language/english/common_lang.php
+      - name: Verify server authorization guard and duplicate approval protection
+        run: php tests/supervisor_receiving.php
+      - name: Verify recipient selection and failed email retry
+        run: php tests/receiving_notifications.php
+      - name: Verify web push and shared service worker
+        run: |
+          php -l application/controllers/Push.php
+          php -l application/models/Receiving_push.php
+          php -l application/migrations/20261007123000_receiving_push.php
+          php -l application/views/push_settings.php
+          php tests/receiving_push.php
+          node --check assets/js/samypos-push.js
+          node --check upup.sw.min.js
+          node tests/push_worker.js
+      - name: Verify owner dashboard permissions and financial summaries
+        run: |
+          php -l application/models/Owner_dashboard.php
+          php -l application/views/owner_panel.php
+          php -l application/models/Register.php
+          php -l application/migrations/20261007140000_owner_dashboard.php
+          php tests/owner_dashboard.php
+      - name: Verify scheduled credit PDFs and weekly analysis
+        run: |
+          php -l application/models/Credit_reports.php
+          php -l application/controllers/Creditreports.php
+          php -l application/controllers/Creditreportmailer.php
+          php -l application/views/credit_reports/settings.php
+          php -l application/views/credit_reports/pdf.php
+          php -l application/migrations/20261007180000_credit_report_schedule.php
+          php tests/credit_reports.php

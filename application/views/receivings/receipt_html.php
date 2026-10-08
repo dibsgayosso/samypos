@@ -66,6 +66,7 @@ for($k=1; $k <= NUMBER_OF_PEOPLE_CUSTOM_FIELDS; $k++){
                 <p id="sale_id"><span><?php echo lang('receivings_transfer_id','',array(),TRUE).": "; ?></span><?php echo H($receiving_id_raw); ?></p>
             <?php } ?>
             <p id="employee"><span><?php echo lang('common_employee','',array(),TRUE).": "; ?></span><?php echo H($employee); ?></p>
+<?php $this->load->view('receivings/authorization_stamp'); ?>
         </td>
 
         <td colspan="2" valign="top" align="right" style="width:33.33%">

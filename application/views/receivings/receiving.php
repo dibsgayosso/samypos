@@ -1168,7 +1168,7 @@ $has_cost_price_permission = $this->Employee->has_module_action_permission('item
 							<?php echo form_input(array('name' => 'amount_tendered', 'id' => 'amount_tendered', 'value' => to_currency_no_money($amount_due), 'class' => 'add-input numKeyboard form-control '.(!$has_cost_price_permission ? 'hidden' : ''), 'data-title' => lang('common_payment_amount')));	?>
 							<span class="input-group-addon">
 								<a href="#" class="" id="add_payment_button"><?php echo lang('common_add_payment'); ?></a>
-								<a href="#" class="hidden" id="finish_sale_alternate_button"><?php echo (!$is_po ? lang('receivings_complete_receiving') : lang('receivings_suspend_and_complete_po')); ?></a>
+								<a href="#" class="hidden" id="finish_sale_alternate_button"><?php echo (!$is_po ? ($mode === 'store_account_payment' ? lang('receivings_complete_receiving') : 'Enviar a autorización') : lang('receivings_suspend_and_complete_po')); ?></a>
 							</span>
 
 						</div>
@@ -1341,7 +1341,7 @@ $has_cost_price_permission = $this->Employee->has_module_action_permission('item
 							<div id="finish_sale" class="receivings-finish-sale">
 								<div class="input-group add-payment-form">
 									<span class="input-group-addon" style="background-color: inherit !important;">
-										<a href="#" id="finish_sale_button" class="finish-transfer-button btn-danger"><?php echo lang('receivings_complete_transfer'); ?></a>
+										<a href="#" id="finish_sale_button" class="finish-transfer-button btn-danger"><?php echo 'Enviar a autorización'; ?></a>
 									</span>
 								</div>
 							</div>
@@ -1373,10 +1373,11 @@ $has_cost_price_permission = $this->Employee->has_module_action_permission('item
 						</div>
 
 						<div id="finish_sale" class="finish-sale receivings-finish-sale">
-							<?php echo form_open("receivings/" . (!$is_po ? 'complete' : 'suspend'), array('id' => 'finish_sale_form', 'autocomplete' => 'off')); ?>
+							<?php if (!$is_po && $mode !== 'store_account_payment') { ?><p class="text-warning">Pendiente de autorización: el supervisor debe revisar la mercancía antes de que entre al inventario.</p><?php } ?>
+                            <?php echo form_open("receivings/" . (!$is_po ? 'complete' : 'suspend'), array('id' => 'finish_sale_form', 'autocomplete' => 'off')); ?>
 							<?php
 							if (count($payments) > 0 && $payments_cover_total && $supplier_required_check) {
-								echo "<input type='button' class='btn btn-success btn-large btn-block' id='finish_sale_button' value='" . (!$is_po ? lang('receivings_complete_receiving') : lang('receivings_suspend_and_complete_po')) . "' />";
+								echo "<input type='button' class='btn btn-success btn-large btn-block' id='finish_sale_button' value='" . (!$is_po ? ($mode === 'store_account_payment' ? lang('receivings_complete_receiving') : 'Enviar a autorización') : lang('receivings_suspend_and_complete_po')) . "' />";
 							}
 							?>
 
@@ -2687,7 +2688,7 @@ $has_cost_price_permission = $this->Employee->has_module_action_permission('item
 
 				<?php if (!$this->config->item('disable_confirm_recv')) { ?>
 
-					bootbox.confirm(<?php echo json_encode(lang("receivings_confirm_finish_receiving")); ?>, function(result) {
+					bootbox.confirm(<?php echo json_encode($mode === 'store_account_payment' ? lang('receivings_confirm_finish_receiving') : '¿Enviar al supervisor? El inventario se actualizará únicamente cuando autorice la mercancía.'); ?>, function(result) {
 						if (result) {
 							//Prevent double submission of form
 							$("#finish_sale_button").hide();

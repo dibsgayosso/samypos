@@ -4,6 +4,7 @@ require_once (APPPATH."traits/receivingTrait.php");
 class Receiving extends MY_Model
 {
 	use receivingTrait;
+	private $supervisor_applying = FALSE;
 	
 	public function __construct()
 	{
@@ -74,8 +75,60 @@ class Receiving extends MY_Model
 		return $success;
 	}
 
+    public function apply_supervisor_request($request)
+    {
+        $employee = $this->Employee->get_logged_in_employee_info()->person_id;
+        if (!$this->Employee->has_module_action_permission('receivings','authorize_receivings',$employee)
+            || (int)$request['location_id'] !== (int)$this->Employee->get_logged_in_employee_current_location_id()
+            || !isset($request['employee_id']) || (int)$request['employee_id']===(int)$employee) return -1;
+        $cart = unserialize(base64_decode($request['cart_payload'], TRUE), array('allowed_classes'=>array(
+            'PHPPOSCartRecv','PHPPOSCartItemRecv','PHPPOSCartItemKitRecv','PHPPOSCartPaymentRecv','stdClass')));
+        if (!($cart instanceof PHPPOSCartRecv) || $cart->get_mode() === 'store_account_payment') return -1;
+        $allowed_locations=$this->Employee->get_authenticated_location_ids($employee);
+        foreach (array($cart->transfer_from_location_id,$cart->transfer_location_id) as $transfer_location) {
+            if ($transfer_location && !in_array($transfer_location,$allowed_locations)) return -1;
+        }
+        // Pending requests are immutable and create a new receipt only after approval.
+        $cart->receiving_id = NULL;
+        $cart->location_id = (int)$request['location_id'];
+        $cart->employee_id = (int)$request['employee_id'];
+        $cart->suspended = 0;
+        $cart->is_po = 0;
+        $cart->skip_webhook = TRUE;
+        foreach ($cart->get_items() as $line) $line->quantity_received = NULL;
+        $previous_cart = isset($this->cart) ? $this->cart : NULL;
+        $this->cart = $cart;
+        $this->supervisor_applying = TRUE;
+        try { return $this->save($cart, FALSE); }
+        finally { $this->supervisor_applying = FALSE; $this->cart = $previous_cart; }
+    }
+
 	function save ($cart,$async=TRUE)
 	{
+        // The server controls application; no request/cart property can authorize inventory.
+        $draft_only = !$this->supervisor_applying && $cart->get_mode() !== 'store_account_payment';
+        if ($draft_only) {
+            if (!(int)$cart->suspended) return -1;
+            foreach ($cart->get_items() as $line) {
+                if ((float)$line->quantity_received != 0) return -1;
+            }
+            if ($cart->receiving_id) {
+                $old = $this->get_info($cart->receiving_id)->row();
+                if (!$old || !(int)$old->suspended || (float)$old->total_quantity_received != 0) return -1;
+            }
+        }
+        if (!$this->supervisor_applying && $cart->get_mode() === 'store_account_payment') {
+            // Changing mode cannot turn ordinary merchandise into a balance payment.
+            $account_item = $this->Item->get_store_account_item_id();
+            foreach ($cart->get_items() as $line) {
+                if (!isset($line->item_id) || (int)$line->item_id !== (int)$account_item) return -1;
+            }
+            if ($cart->receiving_id) {
+                $old = $this->get_info($cart->receiving_id)->row();
+                if (!$old || !$old->store_account_payment) return -1;
+            }
+        }
+
 		if ($async)
 		{
 			$_SESSION['async_inventory_updates'] = array();
@@ -105,7 +158,7 @@ class Receiving extends MY_Model
 		$is_po =  $cart->is_po ? 1 : 0;
 		$location_id=$cart->transfer_location_id;
 		$store_account_payment = $cart->get_mode() == 'store_account_payment' ? 1 : 0;
-		$suspended = $this->cart->suspended ? $this->cart->suspended : 0;
+		$suspended = $cart->suspended ? $cart->suspended : 0;
 		$store_account_in_all_languages = get_all_language_values_for_key('common_store_account','common');
 		
 		$balance = 0;
@@ -184,6 +237,7 @@ class Receiving extends MY_Model
 		
 		);
 		
+
 		for($k=1;$k<=NUMBER_OF_PEOPLE_CUSTOM_FIELDS;$k++) 
 		{
 			$receivings_data["custom_field_${k}_value"] = $this->cart->{"custom_field_${k}_value"};
@@ -269,7 +323,7 @@ class Receiving extends MY_Model
 		
 		//store_accounts_paid_receivings
 		$paid_receivings = $cart->get_paid_store_account_ids();
-		if (!empty($paid_receivings))
+		if (!$draft_only && !empty($paid_receivings))
 		{			
 			foreach(array_keys($cart->get_paid_store_account_ids()) as $receiving_id_paid)
 			{
@@ -427,7 +481,7 @@ class Receiving extends MY_Model
 				}
 			}
 			
-			if($mode !='transfer' && ($cur_item_info->unit_price !== $item->selling_price || (isset($cur_item_variation_info) && $cur_item_variation_info->unit_price != $item->selling_price)))
+			if(!$draft_only && $mode !='transfer' && ($cur_item_info->unit_price !== $item->selling_price || (isset($cur_item_variation_info) && $cur_item_variation_info->unit_price != $item->selling_price)))
 			{
 				if ((isset($cur_item_variation_info) && $cur_item_variation_info->unit_price != $item->selling_price))
 				{
@@ -450,7 +504,7 @@ class Receiving extends MY_Model
 				}
 			}
 			
-			if($mode !='transfer' && ($cur_item_location_info->unit_price !== $item->location_selling_price || (isset($cur_item_variation_info) && $cur_item_variation_info->unit_price != $item->selling_price)))
+			if(!$draft_only && $mode !='transfer' && ($cur_item_location_info->unit_price !== $item->location_selling_price || (isset($cur_item_variation_info) && $cur_item_variation_info->unit_price != $item->selling_price)))
 			{
 				if ($item->location_selling_price !=0)
 				{
@@ -545,7 +599,7 @@ class Receiving extends MY_Model
 			$array_preg 			= preg_replace('/\s+/', ',', $array_preg);
 			$get_serial_range 		= explode(',', $array_preg);
 	
-			foreach ($get_serial_range as $key => $serial_range) 
+			foreach ($draft_only ? array() : $get_serial_range as $key => $serial_range)
 			{
 				if (!empty($serial_range)) {
 					$this->load->model('Item_serial_number');
@@ -629,7 +683,7 @@ class Receiving extends MY_Model
 			}
 			
 			//Update stock quantity IF not a service item
-			if (!$cur_item_info->is_service)
+			if (!$draft_only && !$cur_item_info->is_service)
 			{
 				
 				//This means we never adjusted quantity_received so we should accept all
@@ -814,7 +868,7 @@ class Receiving extends MY_Model
 		}
 		
 		
-		if ($cart->create_invoice && $balance)
+		if (!$draft_only && $cart->create_invoice && $balance)
 		{
 
 
@@ -858,7 +912,7 @@ class Receiving extends MY_Model
 		}
 		
 		
-		if (!$cart->skip_webhook)
+		if (!$draft_only && !$cart->skip_webhook)
 		{
 			if($this->config->item('new_receiving_web_hook') && $is_new_receiving)
 			{
@@ -890,7 +944,10 @@ class Receiving extends MY_Model
 	
 	function delete($receiving_id, $all_data = false, $update_quantity = true)
 	{
-		$recv_info = $this->get_info($receiving_id)->row_array();	
+		$recv_info = $this->get_info($receiving_id)->row_array();
+        if (!$all_data && !empty($recv_info) && !$recv_info['store_account_payment'] && !$recv_info['suspended']
+            && !$this->Employee->has_module_action_permission('receivings','authorize_receivings',$this->Employee->get_logged_in_employee_info()->person_id)) return FALSE;
+
 		
 		$suspended = $recv_info['suspended'];
 		
@@ -1081,7 +1138,11 @@ class Receiving extends MY_Model
 	{
 		$employee_id=$this->Employee->get_logged_in_employee_info()->person_id;
 	
-		$recv_info = $this->get_info($receiving_id)->row_array();		
+		$recv_info = $this->get_info($receiving_id)->row_array();
+        if (empty($recv_info) || !$recv_info['deleted']) return FALSE;
+        if (!$recv_info['store_account_payment'] && !$recv_info['suspended']
+            && !$this->Employee->has_module_action_permission('receivings','authorize_receivings',$this->Employee->get_logged_in_employee_info()->person_id)) return FALSE;
+
 		$suspended = $recv_info['suspended'];
 		
 		if ($suspended == 0)

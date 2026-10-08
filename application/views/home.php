@@ -1,6 +1,22 @@
 <?php $this->load->view("partial/header"); 
 $this->load->helper('demo');
 ?>
+<?php if ($supervisor_result=$this->session->flashdata('supervisor_result')) { ?><div class="alert alert-info" role="status"><?php echo html_escape($supervisor_result); ?></div><?php } ?>
+
+<?php if (!empty($can_view_owner_dashboard)) { ?>
+<p><a class="btn btn-default" href="<?php echo site_url('creditreports'); ?>">Programar informe de créditos por correo</a></p>
+<div id="owner-dashboard"><?php $this->load->view('owner_panel'); ?></div>
+<script>
+(function(){var busy=false;setInterval(function(){
+ if(busy||document.hidden)return;busy=true;
+ var opened=[];jQuery('#owner-dashboard details[open]').each(function(){opened.push(this.id);});
+ jQuery.get(<?php echo json_encode(site_url('home/owner_panel')); ?>).done(function(html){
+  jQuery('#owner-dashboard').html(html);opened.forEach(function(id){var node=document.getElementById(id);if(node)node.open=true;});
+  jQuery('#owner-dashboard-refresh').text('Actualizado '+new Date().toLocaleTimeString());
+ }).fail(function(){jQuery('#owner-dashboard-refresh').text('No se pudo actualizar. Se reintentará en 30 segundos.');}).always(function(){busy=false;});
+},30000);})();
+</script>
+<?php } ?>
 
 		<?php
 		if(isset($announcement))
@@ -549,6 +565,28 @@ if (!is_on_demo_host() && !$this->config->item('hide_test_mode_home') && !$this-
 	
 </div>
 
+<div id="my-receiving-requests"><?php $this->load->view('my_receiving_requests'); ?></div>
+<script>
+(function(){var busy=false;setInterval(function(){if(busy||document.hidden)return;busy=true;
+jQuery.get(<?php echo json_encode(site_url('home/my_receiving_requests')); ?>).done(function(html){jQuery('#my-receiving-requests').html(html);}).always(function(){busy=false;});},30000);})();
+</script>
+<?php if (!empty($can_supervise) || $this->Employee->has_module_permission('config',$this->session->userdata('person_id'))) { $this->load->view('push_settings'); } ?>
+<?php if (!empty($can_supervise)) { ?>
+<div id="supervisor-panel"><?php $this->load->view('supervisor_panel'); ?></div>
+<script>
+(function(){
+ var busy=false;
+ setInterval(function(){
+  if(busy || document.hidden) return;
+  busy=true;
+  jQuery.get(<?php echo json_encode(site_url('home/supervisor_panel')); ?>).done(function(html){
+   jQuery('#supervisor-panel').html(html);
+  }).always(function(){busy=false;});
+ },30000);
+})();
+</script>
+<?php } ?>
+
 <?php if (!empty($can_view_register_difference)) { ?>
 <div class="row">
 	<div class="col-md-12">
@@ -571,7 +609,7 @@ if (!is_on_demo_host() && !$this->config->item('hide_test_mode_home') && !$this-
 </div>
 <?php } ?>
 
-<?php if ($this->Employee->has_module_action_permission('reports', 'view_dashboard_stats', $this->Employee->get_logged_in_employee_info()->person_id)) { ?>
+<?php if (!empty($can_supervise) || $this->Employee->has_module_action_permission('reports', 'view_dashboard_stats', $this->Employee->get_logged_in_employee_info()->person_id)) { ?>
 <div class="row">
 <div class="col-md-6">
 <div class="panel panel-piluku">
