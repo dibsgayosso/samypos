@@ -418,6 +418,7 @@ if (!is_on_demo_host() && !$this->config->item('hide_test_mode_home') && !$this-
 	<?php
 	}
 	?>
+<?php if (empty($can_view_owner_dashboard)) { ?>
 	<div class="row">
 		
 		<div class="col-lg-3 col-md-6 col-sm-6 col-xs-12">
@@ -483,6 +484,7 @@ if (!is_on_demo_host() && !$this->config->item('hide_test_mode_home') && !$this-
 		<?php } ?>
 		
 	</div>
+<?php } ?>
 </div>
 
 <?php } ?>
@@ -523,6 +525,7 @@ if (!is_on_demo_host() && !$this->config->item('hide_test_mode_home') && !$this-
 </div>
 	<?php } ?>
 
+<?php if (empty($can_view_owner_dashboard)) { ?>
 <h5 class="text-center"><?php echo lang('home_welcome_message');?></h5>
 
 <div class="row quick-actions">
@@ -584,12 +587,14 @@ if (!is_on_demo_host() && !$this->config->item('hide_test_mode_home') && !$this-
 	
 </div>
 
+<?php } ?>
 <div id="my-receiving-requests"><?php $this->load->view('my_receiving_requests'); ?></div>
 <script>
 (function(){var busy=false;setInterval(function(){if(busy||document.hidden)return;busy=true;
 jQuery.get(<?php echo json_encode(site_url('home/my_receiving_requests')); ?>).done(function(html){jQuery('#my-receiving-requests').html(html);}).always(function(){busy=false;});},30000);})();
 </script>
-<?php if (!empty($can_view_supervisor_dashboard) || $this->Employee->has_module_permission('config',$this->session->userdata('person_id'))) { $this->load->view('push_settings'); } ?>
+<?php if (!empty($can_view_supervisor_dashboard) || $this->Employee->has_module_permission('config',$this->session->userdata('person_id'))) { ?><details class="owner-push-controls" style="margin:18px 0;padding:14px;border:1px solid #e2e8f0;border-radius:12px;background:white"><summary style="cursor:pointer;font-weight:600">Notificaciones de mercancía · Configurar y probar</summary><?php $this->load->view('push_settings'); ?></details><?php } ?>
+<?php if (empty($can_view_owner_dashboard)) { ?>
 <?php if (!empty($can_view_register_difference)) { ?>
 <div class="row">
 	<div class="col-md-12">
@@ -667,7 +672,7 @@ Ventas únicas de hoy: <?php echo (int)$payment_breakdown['sales_count']; ?><br>
 <div class="tab-content piluku-tab-content">
 <div role="tabpanel" class="tab-pane active" id="month">
 <div class="chart">
-<?php if(isset($month_sale) && !isset($month_sale['message'])){ ?>
+<?php if(empty($can_view_owner_dashboard) && isset($month_sale) && !isset($month_sale['message'])){ ?>
 <canvas id="charts" width="400" height="100"></canvas>
 <?php } else{
 									echo $month_sale['message'];
@@ -683,6 +688,7 @@ Ventas únicas de hoy: <?php echo (int)$payment_breakdown['sales_count']; ?><br>
 </div>
 </div>
 </div>
+<?php } ?>
 <?php } ?>
 </div>
 
@@ -777,7 +783,7 @@ Ventas únicas de hoy: <?php echo (int)$payment_breakdown['sales_count']; ?><br>
 		<?php } ?>
 
 
-<?php if(isset($month_sale) && !isset($month_sale['message'])){ ?>
+<?php if(empty($can_view_owner_dashboard) && isset($month_sale) && !isset($month_sale['message'])){ ?>
 var data = {
 labels: <?php echo $month_sale['day'] ?>,
 datasets: [

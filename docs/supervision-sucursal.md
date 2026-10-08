@@ -97,3 +97,8 @@ El panel del propietario registra fallos y presenta un aviso sin bloquear todo H
 ### Panel visual del supervisor
 
 Home muestra el panel al inicio a quienes tienen acceso a Recepciones y autorización en al menos una sucursal accesible. Incluye tarjetas por sucursal, métodos de pago con sus nombres configurados, operaciones, gráfica de distribución positiva, gastos con impuestos, última venta de mercancía y solicitudes pendientes. Las devoluciones se conservan en los importes; abonos a crédito se excluyen de las ventas. Cada sucursal utiliza su fecha local. Se refresca cada 30 segundos. Revisar una solicitud de otra sucursal utiliza el flujo de cambio de sucursal ya existente y vuelve a validar los permisos antes de autorizar.
+
+
+### Panel ilustrativo del propietario
+
+Incluye tarjetas de totales, gráfica de métodos de pago, comparación por sucursal, tarjetas de entradas/créditos/gastos y diferencias del último corte sujetas al permiso existente. El detalle de gastos y pagos se despliega por sucursal. Las tarjetas históricas, bienvenida, accesos rápidos y gráficos antiguos de Home se ocultan para quien ve el panel del propietario; los controles push quedan plegados y siguen disponibles. No necesita otra migración.

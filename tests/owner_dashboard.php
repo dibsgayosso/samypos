@@ -80,6 +80,11 @@ $owner_dashboard=$dashboard;
 ob_start(); require APPPATH.'views/owner_panel.php'; $html=ob_get_clean();
 check(strpos($html,'<script>')===FALSE && strpos($html,'&lt;script&gt;')!==FALSE,'Escape branch and expense names');
 check(strpos($html,'Faltante')!==FALSE && strpos($html,'Transferencia: BBVA')!==FALSE,'Render cut warning and exact payment names');
+check(substr_count($html,'class="ow-branch"')===2 && strpos($html,'stroke-dasharray=')!==FALSE,'Render illustrated branch cards and payment chart');
+$private=$dashboard; foreach ($private['branches'] as &$private_branch) $private_branch['can_view_difference']=FALSE; unset($private_branch);
+$owner_dashboard=$private; ob_start(); require APPPATH.'views/owner_panel.php'; $private_html=ob_get_clean();
+check(strpos($private_html,'Faltante')===FALSE && strpos($private_html,'Sin permiso para ver diferencias')!==FALSE,'Illustrated cut card must hide differences without permission');
+
 ob_start(); require APPPATH.'language/spanish/common_lang.php'; $output=ob_get_clean();
 check($output==='' && $lang['common_authorize_receivings']==='Autorizar recepciones de mercancía' && $lang['common_view_owner_dashboard']==='Ver panel del propietario','Spanish permissions must load as PHP without stray output');
 echo "Owner dashboard permissions, consolidation, balances, cuts and rendering tests passed\n";

@@ -1,75 +1,64 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
-if (!empty($owner_dashboard['error'])) {
-    echo '<div class="alert alert-danger" role="alert">No se pudo cargar el panel del propietario. Revisa el registro de errores y que estén aplicadas las migraciones. El resto de Home sigue disponible.</div>';
-    return;
-}
-$totals=$owner_dashboard['totals'];
-$elapsed=function($stamp) { return $stamp===NULL ? 'Sin ventas registradas' : 'Hace '.number_format(max(0,(int)floor((time()-$stamp)/60)),0,'.',',').' min'; };
+ defined('BASEPATH') OR exit('No direct script access allowed');
+ if (!empty($owner_dashboard['error'])) { echo '<div class="alert alert-danger" role="alert">No se pudo cargar el panel del propietario. Revisa el registro de errores y las migraciones.</div>'; return; }
+ $totals=$owner_dashboard['totals']; $branches=$owner_dashboard['branches'];
+ $elapsed=function($stamp) { return $stamp===NULL ? 'Sin ventas registradas' : 'Hace '.number_format(max(0,(int)floor((time()-$stamp)/60)),0,'.',',').' min'; };
+ $palette=array('#2563eb','#7c3aed','#0891b2','#db2777','#d97706','#15803d');
+ $payment_chart=function($payments) use ($palette) { $positive=0; foreach ($payments as $payment) $positive+=max(0,(float)$payment['total']); $offset=0;
+?>
+ <div class="ow-payment-chart"><svg viewBox="0 0 120 120" role="img" aria-label="Distribución de montos positivos por método de pago"><circle cx="60" cy="60" r="45" fill="none" stroke="#e2e8f0" stroke-width="15"/>
+ <?php foreach ($payments as $i=>$payment) { $length=$positive>0 ? max(0,(float)$payment['total'])/$positive*282.743 : 0; if ($length>0) { ?><circle cx="60" cy="60" r="45" fill="none" stroke="<?php echo $palette[$i%count($palette)]; ?>" stroke-width="15" stroke-dasharray="<?php echo number_format($length,3,'.','').' '.number_format(282.743-$length,3,'.',''); ?>" stroke-dashoffset="<?php echo number_format(-$offset,3,'.',''); ?>" transform="rotate(-90 60 60)"/><?php } $offset+=$length; } ?>
+ <text x="60" y="57" text-anchor="middle" fill="#172554" font-size="13" font-weight="bold">Pagos</text><text x="60" y="73" text-anchor="middle" fill="#64748b" font-size="9">de hoy</text></svg>
+ <div class="ow-legend"><?php foreach ($payments as $i=>$payment) { $percent=$positive>0 ? max(0,(float)$payment['total'])/$positive*100 : 0; ?><div class="ow-method"><div class="ow-bar-label"><strong><?php echo html_escape($payment['label']); ?></strong><span><?php echo to_currency($payment['total']); ?> · <?php echo (int)$payment['operations']; ?> op.</span></div><div class="ow-bar"><span style="width:<?php echo number_format($percent,2,'.',''); ?>%;background:<?php echo $palette[$i%count($palette)]; ?>"></span></div></div><?php } ?></div></div>
+<?php };
+ $max_sales=0; foreach ($branches as $branch) $max_sales=max($max_sales,abs((float)$branch['sales_total']));
 ?>
 <style>
-.owner-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:18px}
-.owner-kpi{background:#f4f7fb;border:1px solid #e0e6ed;border-radius:8px;padding:16px}
-.owner-kpi strong{display:block;font-size:22px;margin:8px 0;color:#243c64}
-.owner-kpi small,.owner-branch-note{display:block;color:#666}
-.owner-table th{white-space:nowrap}.owner-table td{vertical-align:top!important;min-width:140px}
-.owner-table td:first-child{min-width:170px}.owner-details{padding:14px;border:1px solid #e0e6ed;border-radius:8px;margin-top:10px}
-.owner-details summary{cursor:pointer;font-weight:600}.owner-details table{margin-top:12px}.owner-positive{color:#226b40}.owner-negative{color:#a12d28}
-@media print{.owner-details{break-inside:avoid}.owner-kpis{grid-template-columns:repeat(3,1fr)}}
+.ow-dashboard{color:#172554;margin:18px 0 26px}.ow-dashboard *{box-sizing:border-box}.ow-hero{padding:25px;border-radius:18px;background:linear-gradient(120deg,#0f172a,#0e7490);color:#fff;display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap}.ow-hero h2{font-size:27px;font-weight:700;margin:5px 0 10px;color:#fff!important}.ow-hero p{margin:0;color:#cffafe}.ow-eyebrow{font-size:12px;letter-spacing:1.5px;text-transform:uppercase}.ow-live{font-size:12px;background:#ffffff20;border:1px solid #ffffff40;border-radius:25px;padding:10px 14px}.ow-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:13px;margin:16px 0 20px}.ow-kpi{padding:18px;border:1px solid #bfdbfe;background:#eff6ff;border-radius:16px;overflow-wrap:anywhere}.ow-kpi strong{display:block;font-size:25px;font-weight:700;margin:9px 0}.ow-kpi small{display:block}.ow-kpi .ow-symbol{float:right;font-size:23px}.ow-cyan{background:#ecfeff;border-color:#a5f3fc;color:#155e75}.ow-amber{background:#fffbeb;border-color:#fde68a;color:#92400e}.ow-violet{background:#f5f3ff;border-color:#ddd6fe;color:#5b21b6}.ow-rose{background:#fff1f2;border-color:#fecdd3;color:#9f1239}
+.ow-overview{display:grid;grid-template-columns:1.2fr 1fr;gap:18px}.ow-box,.ow-branch{background:white;border:1px solid #e2e8f0;border-radius:18px;padding:22px;box-shadow:0 5px 16px #17255408}.ow-dashboard h3{font-size:19px;font-weight:700;margin:0 0 18px;color:#172554}.ow-dashboard h4{font-size:14px;font-weight:600;margin:17px 0 12px}.ow-payment-chart{display:flex;align-items:center;gap:20px}.ow-payment-chart svg{width:135px;height:135px;flex-shrink:0}.ow-legend{min-width:0;flex:1}.ow-method{margin-bottom:14px}.ow-bar-label{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:13px}.ow-bar-label strong{overflow-wrap:anywhere}.ow-bar{height:8px;background:#f1f5f9;border-radius:9px;overflow:hidden;margin-top:7px}.ow-bar span{display:block;height:100%;border-radius:9px}.ow-caption{font-size:12px;color:#64748b;margin:14px 0 0}.ow-ranking{margin-bottom:17px}.ow-ranking .ow-bar{height:12px}
+.ow-branches{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.ow-branch-head{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}.ow-branch-head h3{margin:0}.ow-status{font-size:12px;border-radius:25px;padding:7px 11px;background:#dcfce7;color:#166534;font-weight:600}.ow-status.pending{background:#fef3c7;color:#92400e}.ow-date{font-size:12px;color:#64748b;margin:8px 0 17px}.ow-sales{display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap;padding:15px;background:#eff6ff;border-radius:12px}.ow-sales strong{display:block;font-size:27px;margin-top:5px}.ow-sales small{color:#475569}.ow-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:15px 0}.ow-metric{border:1px solid #e2e8f0;border-radius:12px;padding:12px;overflow-wrap:anywhere}.ow-metric strong{display:block;font-size:19px;margin:7px 0}.ow-metric small{color:#64748b;display:block}.ow-cut{padding:15px;background:#f8fafc;border-radius:12px;margin:15px 0}.ow-cut strong{display:block;font-size:22px;margin:8px 0}.owner-negative{color:#b91c1c}.owner-positive{color:#15803d}.ow-cut small{display:block;color:#64748b}.owner-details{border-top:1px solid #e2e8f0;padding-top:14px;margin-top:15px}.owner-details summary{cursor:pointer;font-weight:600;color:#0e7490}.ow-expense{margin:13px 0}.ow-expense span{font-size:12px;color:#64748b}.ow-note{font-size:12px;color:#64748b;margin-top:18px}
+@media(max-width:1100px){.ow-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:800px){.ow-overview,.ow-branches{grid-template-columns:1fr}.ow-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:430px){.ow-box,.ow-branch{padding:16px}.ow-kpi strong{font-size:21px}.ow-payment-chart{gap:12px}.ow-payment-chart svg{width:80px;height:80px}.ow-metrics{grid-template-columns:1fr}.ow-metric{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.ow-metric strong{font-size:20px}.ow-hero{padding:20px}}
 </style>
-<div class="panel panel-piluku">
- <div class="panel-heading"><h3>Panel del propietario</h3><span id="owner-dashboard-refresh" role="status" aria-live="polite">Se actualiza cada 30 segundos</span></div>
- <div class="panel-body">
- <p>Hoy · <?php echo count($owner_dashboard['branches']); ?> sucursal(es) autorizadas · Última venta: <strong><?php echo $elapsed($owner_dashboard['last_sale']); ?></strong></p>
- <?php if (!$owner_dashboard['branches']) { ?><p>No hay sucursales disponibles con permiso para este panel.</p><?php } else { ?>
- <div class="owner-kpis">
-  <div class="owner-kpi">Ventas de hoy<strong><?php echo to_currency($totals['sales_total']); ?></strong><small><?php echo (int)$totals['sales_count']; ?> operaciones únicas</small></div>
-  <div class="owner-kpi">Entradas de mercancía<strong><?php echo to_currency($totals['receiving_total']); ?></strong><small><?php echo (int)$totals['receiving_count']; ?> recepciones aplicadas hoy</small></div>
-  <div class="owner-kpi">Pendientes de autorizar<strong><?php echo $owner_dashboard['receiving_ready'] ? (int)$totals['pending_count'] : 'Por activar'; ?></strong><small><?php echo $owner_dashboard['receiving_ready'] ? to_currency($totals['pending_total']).' sin aplicar al inventario' : 'Aplica la migración de autorizaciones'; ?></small></div>
-  <div class="owner-kpi">Créditos por cobrar<strong><?php echo to_currency($totals['credit_balance']); ?></strong><small><?php echo (int)$totals['credit_customers']; ?> clientes con deuda pendiente</small></div>
-  <div class="owner-kpi">Gastos de hoy<strong><?php echo to_currency($totals['expenses_total']); ?></strong><small><?php echo (int)$totals['expenses_count']; ?> gastos · incluye impuestos</small></div>
+<section class="ow-dashboard" aria-label="Panel del propietario">
+ <div class="ow-hero"><div><span class="ow-eyebrow">Tu negocio, de un vistazo</span><h2>Panel del propietario</h2><p><?php echo count($branches); ?> sucursal(es) autorizadas · Última venta: <?php echo $elapsed($owner_dashboard['last_sale']); ?></p></div><span class="ow-live" id="owner-dashboard-refresh" role="status" aria-live="polite">Actualización cada 30 s</span></div>
+ <?php if (!$branches) { ?><p class="ow-box">No hay sucursales disponibles con permiso para este panel.</p><?php } else { ?>
+ <div class="ow-kpis">
+  <div class="ow-kpi"><span class="ow-symbol" aria-hidden="true">↗</span>Ventas de hoy<strong><?php echo to_currency($totals['sales_total']); ?></strong><small><?php echo (int)$totals['sales_count']; ?> operaciones únicas</small></div>
+  <div class="ow-kpi ow-cyan"><span class="ow-symbol" aria-hidden="true">▣</span>Entradas del día<strong><?php echo to_currency($totals['receiving_total']); ?></strong><small><?php echo (int)$totals['receiving_count']; ?> recepciones aplicadas</small></div>
+  <div class="ow-kpi ow-amber"><span class="ow-symbol" aria-hidden="true">◷</span>Por autorizar<strong><?php echo $owner_dashboard['receiving_ready'] ? (int)$totals['pending_count'] : 'Por activar'; ?></strong><small><?php echo $owner_dashboard['receiving_ready'] ? to_currency($totals['pending_total']).' pendientes' : 'Aplica la migración de autorizaciones'; ?></small></div>
+  <div class="ow-kpi ow-violet"><span class="ow-symbol" aria-hidden="true">◎</span>Créditos por cobrar<strong><?php echo to_currency($totals['credit_balance']); ?></strong><small><?php echo (int)$totals['credit_customers']; ?> clientes con deuda</small></div>
+  <div class="ow-kpi ow-rose"><span class="ow-symbol" aria-hidden="true">↓</span>Gastos de hoy<strong><?php echo to_currency($totals['expenses_total']); ?></strong><small><?php echo (int)$totals['expenses_count']; ?> registros · incluye impuestos</small></div>
  </div>
- <h4>Ventas de hoy por método de pago · Consolidado</h4>
- <div class="table-responsive"><table class="table table-striped">
-  <thead><tr><th scope="col">Método configurado</th><th scope="col" class="text-right">Operaciones</th><th scope="col" class="text-right">Monto</th></tr></thead>
-  <tbody><?php foreach ($owner_dashboard['payments'] as $payment) { ?>
-   <tr><th scope="row"><?php echo html_escape($payment['label']); ?></th><td class="text-right"><?php echo (int)$payment['operations']; ?></td><td class="text-right"><?php echo to_currency($payment['total']); ?></td></tr>
-  <?php } ?></tbody>
- </table></div>
- <p class="text-muted">Las ventas incluyen devoluciones y excluyen ventas eliminadas, suspendidas y abonos a créditos. Una venta combinada cuenta en cada método utilizado, y una sola vez en operaciones únicas.</p>
- <h4>Control por sucursal</h4>
- <div class="table-responsive"><table class="table table-striped owner-table">
-  <thead><tr><th scope="col">Sucursal</th><th scope="col">Ventas de hoy</th><th scope="col">Entradas del día</th><th scope="col">Último corte de caja</th><th scope="col">Última venta</th><th scope="col">Créditos por cobrar</th><th scope="col">Gastos de hoy</th></tr></thead>
-  <tbody><?php foreach ($owner_dashboard['branches'] as $branch) { ?>
-  <tr>
-   <th scope="row"><?php echo html_escape($branch['name']); ?><small class="owner-branch-note"><?php echo html_escape($branch['day'].' · '.$branch['timezone']); ?></small></th>
-   <td><strong><?php echo to_currency($branch['sales_total']); ?></strong><small class="owner-branch-note"><?php echo (int)$branch['sales_count']; ?> operaciones</small></td>
-   <td><strong><?php echo to_currency($branch['receiving_total']); ?></strong><small class="owner-branch-note"><?php echo (int)$branch['receiving_count']; ?> recepciones aplicadas</small><?php if ($owner_dashboard['receiving_ready']) { ?><span class="label label-<?php echo $branch['pending_count'] ? 'warning' : 'default'; ?>"><?php echo (int)$branch['pending_count']; ?> pendientes</span><?php } ?></td>
-   <td><?php if (!$branch['can_view_difference']) { ?>Sin permiso para ver diferencias<?php } elseif (!$branch['last_close']) { ?>Sin corte cerrado<?php } else { $close=$branch['last_close']; $difference=(float)$close['difference']; ?>
-    <strong class="<?php echo $difference<-.005 ? 'owner-negative' : 'owner-positive'; ?>"><?php echo to_currency($difference); ?></strong>
-    <small class="owner-branch-note"><?php echo $difference<-.005 ? 'Faltante' : ($difference>.005 ? 'Sobrante' : 'Sin diferencia'); ?></small>
-    <small class="owner-branch-note"><?php echo html_escape($close['shift_end']); ?></small>
-    <small class="owner-branch-note"><?php echo html_escape($close['employee_name'].' · '.$close['register_name']); ?></small>
-   <?php } ?></td>
-   <td><?php echo $elapsed($branch['last_sale']); ?></td>
-   <td><strong><?php echo to_currency($branch['credit_balance']); ?></strong><small class="owner-branch-note"><?php echo (int)$branch['credit_customers']; ?> clientes</small><?php if ($branch['credit_in_favor']>0) { ?><small class="owner-branch-note">Saldo a favor de clientes: <?php echo to_currency($branch['credit_in_favor']); ?></small><?php } ?></td>
-   <td><strong><?php echo to_currency($branch['expenses_total']); ?></strong><small class="owner-branch-note"><?php echo (int)$branch['expenses_count']; ?> gastos</small></td>
-  </tr>
-  <?php } ?></tbody>
- </table></div>
- <?php foreach ($owner_dashboard['branches'] as $branch) { ?>
- <details class="owner-details" id="owner-branch-<?php echo (int)$branch['id']; ?>"><summary>Ver métodos de pago y detalle de gastos · <?php echo html_escape($branch['name']); ?></summary>
- <h5>Ventas por método de pago</h5><div class="table-responsive"><table class="table table-striped"><thead><tr><th scope="col">Método</th><th scope="col" class="text-right">Operaciones</th><th scope="col" class="text-right">Monto</th></tr></thead><tbody>
- <?php foreach ($branch['payments'] as $payment) { ?><tr><th scope="row"><?php echo html_escape($payment['label']); ?></th><td class="text-right"><?php echo (int)$payment['operations']; ?></td><td class="text-right"><?php echo to_currency($payment['total']); ?></td></tr><?php } ?>
- </tbody></table></div>
- <h5>Gastos por categoría · Incluye impuestos</h5>
- <?php if (!$branch['expenses']) { ?><p>Sin gastos registrados hoy.</p><?php } else { ?>
- <div class="table-responsive"><table class="table table-striped"><thead><tr><th scope="col">Categoría</th><th scope="col" class="text-right">Gastos</th><th scope="col" class="text-right">Monto</th></tr></thead><tbody>
- <?php foreach ($branch['expenses'] as $expense) { ?><tr><th scope="row"><?php echo html_escape($expense['category']); ?></th><td class="text-right"><?php echo (int)$expense['operations']; ?></td><td class="text-right"><?php echo to_currency($expense['amount']); ?></td></tr><?php } ?>
- </tbody></table></div><?php } ?>
- </details>
- <?php } ?>
- <p class="text-muted" style="margin-top:15px">Créditos: saldo actual de clientes asignados a cada sucursal; los saldos a favor se muestran por separado. Entradas: mercancía recibida y aplicada con fecha de hoy; las pendientes abarcan todas las fechas. El último corte corresponde al cierre más reciente de cada sucursal y puede ser de un día anterior.</p>
- <?php } ?>
+ <div class="ow-overview">
+  <article class="ow-box"><h3>¿Cómo están pagando hoy?</h3><?php $payment_chart($owner_dashboard['payments']); ?><p class="ow-caption">Montos y operaciones por método configurado. La gráfica representa importes positivos; los montos incluyen devoluciones. Una venta combinada cuenta en cada método utilizado.</p></article>
+  <article class="ow-box"><h3>Ventas de hoy por sucursal</h3><?php foreach ($branches as $i=>$branch) { $width=$max_sales>0 ? abs((float)$branch['sales_total'])/$max_sales*100 : 0; ?><div class="ow-ranking"><div class="ow-bar-label"><strong><?php echo html_escape($branch['name']); ?></strong><span><?php echo to_currency($branch['sales_total']); ?> · <?php echo (int)$branch['sales_count']; ?> op.</span></div><div class="ow-bar"><span style="width:<?php echo number_format($width,2,'.',''); ?>%;background:<?php echo $branch['sales_total']<0 ? '#e11d48' : $palette[$i%count($palette)]; ?>"></span></div></div><?php } ?><p class="ow-caption">Comparativo del día local de cada sucursal. Las barras rosas indican un total negativo por devoluciones.</p></article>
  </div>
-</div>
+ <h3 style="margin:24px 0 15px">El pulso de cada sucursal</h3>
+ <div class="ow-branches">
+ <?php foreach ($branches as $branch) { ?>
+  <article class="ow-branch">
+   <div class="ow-branch-head"><h3><?php echo html_escape($branch['name']); ?></h3><span class="ow-status <?php echo $branch['pending_count'] ? 'pending' : ''; ?>"><?php echo !$owner_dashboard['receiving_ready'] ? 'Autorizaciones por activar' : ($branch['pending_count'] ? (int)$branch['pending_count'].' por autorizar' : 'Sin entradas pendientes'); ?></span></div>
+   <p class="ow-date"><?php echo html_escape($branch['day'].' · '.$branch['timezone']); ?></p>
+   <div class="ow-sales"><div>Ventas de hoy<strong><?php echo to_currency($branch['sales_total']); ?></strong><small><?php echo (int)$branch['sales_count']; ?> operaciones</small></div><div>◷ Última venta<br><b><?php echo $elapsed($branch['last_sale']); ?></b></div></div>
+   <div class="ow-metrics">
+    <div class="ow-metric">▣ Entradas<strong><?php echo to_currency($branch['receiving_total']); ?></strong><small><?php echo (int)$branch['receiving_count']; ?> aplicadas hoy</small></div>
+    <div class="ow-metric">◎ Créditos<strong><?php echo to_currency($branch['credit_balance']); ?></strong><small><?php echo (int)$branch['credit_customers']; ?> clientes con deuda</small><?php if ($branch['credit_in_favor']>0) { ?><small>A favor: <?php echo to_currency($branch['credit_in_favor']); ?></small><?php } ?></div>
+    <div class="ow-metric">↓ Gastos<strong><?php echo to_currency($branch['expenses_total']); ?></strong><small><?php echo (int)$branch['expenses_count']; ?> registros con impuestos</small></div>
+   </div>
+   <div class="ow-cut">Último corte de caja
+    <?php if (!$branch['can_view_difference']) { ?><p>Sin permiso para ver diferencias</p><?php } elseif (!$branch['last_close']) { ?><p>Sin corte cerrado</p><?php } else { $close=$branch['last_close']; $difference=(float)$close['difference']; ?>
+     <strong class="<?php echo $difference<-.005 ? 'owner-negative' : 'owner-positive'; ?>"><?php echo to_currency($difference); ?> · <?php echo $difference<-.005 ? 'Faltante' : ($difference>.005 ? 'Sobrante' : 'Sin diferencia'); ?></strong><small><?php echo html_escape($close['shift_end']); ?></small><small><?php echo html_escape($close['employee_name'].' · '.$close['register_name']); ?></small>
+    <?php } ?>
+   </div>
+   <details class="owner-details" id="owner-branch-<?php echo (int)$branch['id']; ?>"><summary>Ver métodos de pago y detalle de gastos</summary>
+    <h4>Ventas por método de pago</h4><?php $payment_chart($branch['payments']); ?>
+    <h4>Gastos por categoría · Incluye impuestos</h4>
+    <?php if (!$branch['expenses']) { ?><p>Sin gastos registrados hoy.</p><?php } else { $max_expense=0; foreach ($branch['expenses'] as $expense) $max_expense=max($max_expense,abs((float)$expense['amount'])); foreach ($branch['expenses'] as $expense) { $width=$max_expense>0 ? abs((float)$expense['amount'])/$max_expense*100 : 0; ?>
+     <div class="ow-expense"><div class="ow-bar-label"><b><?php echo html_escape($expense['category']); ?></b><span><?php echo to_currency($expense['amount']); ?> · <?php echo (int)$expense['operations']; ?> registros</span></div><div class="ow-bar"><span style="width:<?php echo number_format($width,2,'.',''); ?>%;background:#db2777"></span></div></div>
+    <?php } } ?>
+   </details>
+  </article>
+ <?php } ?></div>
+ <p class="ow-note">Ventas: excluyen eliminadas, suspendidas y abonos a créditos. Créditos: saldo actual de clientes asignados a cada sucursal; los saldos a favor se muestran por separado. Entradas: aplicadas hoy; pendientes: todas las fechas. El último corte puede corresponder a un día anterior.</p>
+ <?php } ?>
+</section>
