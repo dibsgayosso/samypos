@@ -238,6 +238,22 @@ class Config extends Secure_area
 		
 	function save()
 	{
+        $this->load->helper('demo');
+        $login_background_id=NULL;
+        if (!is_on_demo_host() && isset($_FILES['login_background']) && $_FILES['login_background']['error']!==UPLOAD_ERR_NO_FILE) {
+            $upload=$_FILES['login_background'];
+            $image=$upload['error']===UPLOAD_ERR_OK && is_uploaded_file($upload['tmp_name']) ? @getimagesize($upload['tmp_name']) : FALSE;
+            $types=array('image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp');
+            if (!$image || !isset($types[$image['mime']]) || filesize($upload['tmp_name'])>5*1024*1024 || $image[0]*$image[1]>24000000) {
+                echo json_encode(array('success'=>FALSE,'message'=>'Sube una imagen JPG, PNG o WebP de hasta 5 MB y 24 megapíxeles.')); return;
+            }
+            $this->load->model('Appfile');
+            $login_background_id=$this->Appfile->save('login-background.'.$types[$image['mime']],file_get_contents($upload['tmp_name']),NULL,$this->config->item('login_background'));
+            if (!$login_background_id) { echo json_encode(array('success'=>FALSE,'message'=>'No se pudo guardar el fondo de inicio de sesión.')); return; }
+        } elseif (!is_on_demo_host() && $this->input->post('delete_login_background')) {
+            $login_background_id=0;
+        }
+
 		if ($this->config->item("ecommerce_platform"))
 		{
 			require_once (APPPATH."models/interfaces/Ecom.php");
@@ -959,6 +975,7 @@ class Config extends Secure_area
 			$this->Appconfig->set_all_locations_use_global_tax();
 		}
 		
+        if ($login_background_id!==NULL) $batch_save_data['login_background']=$login_background_id;
 		if (isset($company_logo))
 		{
 			$batch_save_data['company_logo'] = $company_logo;

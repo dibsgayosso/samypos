@@ -159,6 +159,16 @@ $this->load->helper('update');
 												<label for="delete_logo"><span></span></label>
 											</div>	
 										</div>
+
+<div class="form-group" data-keyword="fondo login imagen inicio sesión">
+ <label class="col-sm-3 col-md-3 col-lg-2 control-label" for="login_background">Fondo del inicio de sesión</label>
+ <div class="col-sm-9 col-md-9 col-lg-10">
+  <input type="file" name="login_background" id="login_background" accept="image/jpeg,image/png,image/webp" class="filestyle" data-icon="false">
+  <p class="help-block">JPG, PNG o WebP · máximo 5 MB. Recomendado: una imagen horizontal de 1920 × 1080. Se mostrará también antes de iniciar sesión.</p>
+  <?php if ($this->config->item('login_background')) { ?><img src="<?php echo html_escape(secure_app_file_url((int)$this->config->item('login_background'))); ?>" alt="Fondo actual del login" style="max-width:320px;width:100%;border-radius:10px;margin-bottom:12px"><?php } ?>
+  <div><label for="delete_login_background"><input type="checkbox" name="delete_login_background" id="delete_login_background" value="1"> Quitar imagen de fondo</label></div>
+ </div>
+</div>
 										<div class="form-group" data-keyword="<?php echo H(lang('config_keyword_company')) ?>">	
 											<?php echo form_label(lang('common_company').':', 'company',array('class'=>'col-sm-3 col-md-3 col-lg-2 control-label  required')); ?>
 											<div class="col-sm-9 col-md-9 col-lg-10 input-field">

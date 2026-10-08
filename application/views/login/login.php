@@ -22,6 +22,13 @@
             padding: 5px;
         }
     </style>
+
+<?php if ($this->config->item('login_background')) { $background=secure_app_file_url((int)$this->config->item('login_background')); ?>
+<style>
+html{min-height:100%}body{min-height:100vh;background-color:#172554!important;background-image:linear-gradient(rgba(15,23,42,.35),rgba(15,23,42,.55)),url(<?php echo json_encode(str_replace(array('<','>'),array('%3C','%3E'),$background),JSON_UNESCAPED_SLASHES); ?>)!important;background-size:cover!important;background-position:center!important;background-repeat:no-repeat!important}
+.flip-container .front,.flip-container .back{background:rgba(255,255,255,.96);border-radius:16px;box-shadow:0 14px 50px rgba(0,0,0,.25)}
+</style>
+<?php } ?>
     <script type="text/javascript">
         $(document).ready(function()
         {
