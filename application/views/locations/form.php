@@ -1874,7 +1874,7 @@
 					success:function(response)
 					{
 						//Don't let the registers be double submitted, so we change the name
-						$(".registers_to_add").attr('name', 'registers_added[]');
+						if (response.success) $(".registers_to_add").attr('name', 'registers_added[]');
 						
 						$('#grid-loader').hide();
 						submitting = false;						
@@ -1895,7 +1895,12 @@
 					<?php if(!$location_info->location_id) { ?>
 					resetForm: true,
 					<?php } ?>
-					dataType:'json'
+					error:function(xhr){
+                        $('#grid-loader').hide();
+                        submitting=false;
+                        show_feedback('error','No se pudo guardar la sucursal (HTTP '+xhr.status+'). Revisa el registro de errores del servidor y las migraciones.');
+                    },
+                    dataType:'json'
 				});
 
 				},
