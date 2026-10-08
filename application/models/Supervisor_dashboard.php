@@ -11,6 +11,18 @@ class Supervisor_dashboard extends CI_Model
         }
         return array_values(array_unique($allowed));
     }
+    public static function transfer_payments($payments)
+    {
+        $result=array('rows'=>array(),'total'=>0,'operations'=>0);
+        foreach ($payments['rows'] as $row) {
+            // Preserve configured labels; only clearly identified transfer methods qualify.
+            if (!preg_match('/^(transferencia(?:s)?\b|transfer\b|bank transfer\b|spei\b)/iu',trim($row['label']))) continue;
+            $result['rows'][]=$row;
+            $result['total']+=(float)$row['total'];
+            $result['operations']+=(int)$row['operations'];
+        }
+        return $result;
+    }
     public function snapshot($person,$payment_loader)
     {
         $branches=array(); $zone=date_default_timezone_get();
@@ -26,7 +38,7 @@ class Supervisor_dashboard extends CI_Model
                 $branches[]=array('id'=>$id,'name'=>$location->name,'day'=>date('d/m/Y'),
                     'activity'=>$activity,'pending'=>$this->pending($id),
                     'can_authorize'=>$this->Employee->has_module_permission('receivings',$person) && $this->Employee->has_module_action_permission('receivings','authorize_receivings',$person,$id),
-                    'payments'=>call_user_func($payment_loader,$id));
+                    'payments'=>self::transfer_payments(call_user_func($payment_loader,$id)));
             }
         } finally { date_default_timezone_set($zone); }
         return array('branches'=>$branches,'ready'=>$this->ready());

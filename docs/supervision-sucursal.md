@@ -107,3 +107,8 @@ Incluye tarjetas de totales, gráfica de métodos de pago, comparación por sucu
 ### Activar panel del supervisor desde Empleados
 
 Actualizar main y ejecutar `php index.php migrate version 20261008131000`. En Empleados → Editar usuario → Permisos → Reportes, marcar Ver panel del supervisor y las sucursales que puede consultar. Guardar. El permiso no se concede automáticamente ni depende de Autorizar recepciones. Para aprobar mercancía y recibir push, conservar Recepciones → Autorizar recepciones de mercancía y acceso al módulo. La autorización siempre se valida en el servidor.
+
+
+### Importes visibles al supervisor
+
+El panel del supervisor entrega únicamente filas, montos y operaciones de métodos cuyo nombre comienza con Transferencia(s), Transfer, Bank transfer o SPEI. Se conservan los nombres configurados. No entrega total de ventas ni filas de tarjeta, efectivo o créditos en el fragmento HTML del supervisor. Continúan gastos, última venta y mercancía pendiente. Se ocultan también los bloques antiguos de Home para usuarios con este panel, para evitar mostrar ventas por esa vía. El propietario conserva sus importes completos.

@@ -4,7 +4,7 @@
  $branches=$supervisor_dashboard['branches']; $pending=0; $expenses=0; $sales=0; $operations=0; $last=NULL;
  foreach ($branches as $branch) {
   $pending+=count($branch['pending']); $expenses+=$branch['activity']['expenses']['amount']+$branch['activity']['expenses']['tax'];
-  $sales+=$branch['payments']['sales_total']; $operations+=$branch['payments']['sales_count'];
+  $sales+=$branch['payments']['total']; $operations+=$branch['payments']['operations'];
   if ($branch['activity']['last_sale'] && ($last===NULL || $branch['activity']['last_sale_at']>$last)) $last=$branch['activity']['last_sale_at'];
  }
  $ago=function($stamp) { return $stamp ? 'Hace '.number_format(max(0,(int)floor((time()-$stamp)/60)),0,'.',',').' min' : 'Sin ventas registradas'; };
@@ -18,9 +18,9 @@
 @media(max-width:900px){.sv-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.sv-branches{grid-template-columns:1fr}}@media(max-width:400px){.sv-kpi strong{font-size:22px}.sv-chart{align-items:flex-start;gap:10px}.sv-chart svg{width:82px;height:82px}.sv-branch{padding:15px}}
 </style>
 <section class="sv-dashboard" aria-label="Panel del supervisor">
- <div class="sv-hero"><div><span class="sv-eyebrow">Control de tus sucursales</span><h2>Panel del supervisor</h2><p>Ventas, gastos y mercancía por revisar, en un solo lugar.</p></div><span class="sv-live">Actualización cada 30 s</span></div>
+ <div class="sv-hero"><div><span class="sv-eyebrow">Control de tus sucursales</span><h2>Panel del supervisor</h2><p>Transferencias, gastos y mercancía por revisar, en un solo lugar.</p></div><span class="sv-live">Actualización cada 30 s</span></div>
  <div class="sv-kpis">
-  <div class="sv-kpi"><span class="sv-symbol" aria-hidden="true">↗</span>Ventas de hoy<strong><?php echo to_currency($sales); ?></strong><small><?php echo (int)$operations; ?> operaciones únicas</small></div>
+  <div class="sv-kpi"><span class="sv-symbol" aria-hidden="true">↗</span>Transferencias de hoy<strong><?php echo to_currency($sales); ?></strong><small><?php echo (int)$operations; ?> operaciones por método</small></div>
   <div class="sv-kpi sv-violet"><span class="sv-symbol" aria-hidden="true">◷</span>Última venta<strong style="font-size:22px"><?php echo $ago($last); ?></strong><small>Entre tus sucursales autorizadas</small></div>
   <div class="sv-kpi sv-amber"><span class="sv-symbol" aria-hidden="true">▣</span>Por autorizar<strong><?php echo $supervisor_dashboard['ready'] ? $pending : 'Por activar'; ?></strong><small><?php echo $pending ? 'Revisa la mercancía pendiente' : 'Sin solicitudes pendientes'; ?></small></div>
   <div class="sv-kpi sv-rose"><span class="sv-symbol" aria-hidden="true">↓</span>Gastos de hoy<strong><?php echo to_currency($expenses); ?></strong><small>Incluye impuestos</small></div>
@@ -34,19 +34,19 @@
  <article class="sv-branch">
   <div class="sv-branch-head"><h3><?php echo html_escape($branch['name']); ?></h3><span class="sv-status <?php echo $branch['pending'] ? 'pending' : ''; ?>"><?php echo $branch['pending'] ? count($branch['pending']).' por autorizar' : ($supervisor_dashboard['ready'] ? 'Al día' : 'Por activar'); ?></span></div>
   <p class="sv-date">Hoy · <?php echo html_escape($branch['day']); ?> · <?php echo $ago($branch['activity']['last_sale'] ? $branch['activity']['last_sale_at'] : NULL); ?></p>
-  <div class="sv-pair"><div>Ventas de hoy<strong><?php echo to_currency($branch['payments']['sales_total']); ?></strong></div><div>Operaciones<strong><?php echo (int)$branch['payments']['sales_count']; ?></strong></div></div>
-  <h4 style="font-size:14px;font-weight:600">Ventas por método de pago</h4>
+  <div class="sv-pair"><div>Transferencias de hoy<strong><?php echo to_currency($branch['payments']['total']); ?></strong></div><div>Operaciones<strong><?php echo (int)$branch['payments']['operations']; ?></strong></div></div>
+  <h4 style="font-size:14px;font-weight:600">Transferencias por método configurado</h4>
   <div class="sv-chart">
-   <svg viewBox="0 0 120 120" role="img" aria-label="Distribución de importes positivos por método de pago"><circle cx="60" cy="60" r="45" fill="none" stroke="#e2e8f0" stroke-width="15"/>
+   <svg viewBox="0 0 120 120" role="img" aria-label="Distribución de importes positivos de transferencias"><circle cx="60" cy="60" r="45" fill="none" stroke="#e2e8f0" stroke-width="15"/>
     <?php foreach ($rows as $i=>$row) { $ratio=$positive>0 ? max(0,(float)$row['total'])/$positive : 0; $length=$ratio*282.743;
      if ($ratio>0) { ?><circle cx="60" cy="60" r="45" fill="none" stroke="<?php echo $colors[$i%count($colors)]; ?>" stroke-width="15" stroke-dasharray="<?php echo number_format($length,3,'.','').' '.number_format(282.743-$length,3,'.',''); ?>" stroke-dashoffset="<?php echo number_format(-$offset,3,'.',''); ?>" transform="rotate(-90 60 60)"/><?php } $offset+=$length;
-    } ?><text x="60" y="57" text-anchor="middle" fill="#172554" font-size="16" font-weight="bold"><?php echo (int)$branch['payments']['sales_count']; ?></text><text x="60" y="74" text-anchor="middle" fill="#64748b" font-size="9">ventas</text>
+    } ?><text x="60" y="57" text-anchor="middle" fill="#172554" font-size="16" font-weight="bold"><?php echo (int)$branch['payments']['operations']; ?></text><text x="60" y="74" text-anchor="middle" fill="#64748b" font-size="9">transferencias</text>
    </svg>
    <div class="sv-legend"><?php foreach ($rows as $i=>$row) { $percent=$positive>0 ? max(0,(float)$row['total'])/$positive*100 : 0; ?>
     <div class="sv-method"><div class="sv-method-top"><span class="sv-method-label"><?php echo html_escape($row['label']); ?></span><span><?php echo to_currency($row['total']); ?> · <?php echo (int)$row['operations']; ?> op.</span></div><div class="sv-bar"><span style="width:<?php echo number_format($percent,2,'.',''); ?>%;background:<?php echo $colors[$i%count($colors)]; ?>"></span></div></div>
    <?php } ?></div>
   </div>
-  <p class="sv-small">Gráfica de importes positivos. Los montos incluyen devoluciones. Una venta combinada cuenta en cada método utilizado.</p>
+  <p class="sv-small">Solo transferencias. Los montos incluyen devoluciones. Una operación con varios métodos de transferencia cuenta en cada uno.</p>
   <div class="sv-foot"><div>◷ Última venta<strong><?php echo $ago($branch['activity']['last_sale'] ? $branch['activity']['last_sale_at'] : NULL); ?></strong></div><div>↓ Gastos de hoy<strong><?php echo to_currency($branch['activity']['expenses']['amount']+$branch['activity']['expenses']['tax']); ?></strong><small><?php echo (int)$branch['activity']['expenses']['operations']; ?> registros</small></div></div>
   <?php if ($branch['pending']) { ?><details class="sv-requests" data-branch="<?php echo (int)$branch['id']; ?>" open><summary>Mercancía pendiente · <?php echo count($branch['pending']); ?></summary>
    <?php foreach ($branch['pending'] as $receipt) { ?><div class="sv-request"><div><strong>Solicitud #<?php echo (int)$receipt['receiving_id']; ?> · <?php echo to_currency($receipt['total']); ?></strong><small><?php echo html_escape($receipt['receiving_time']); ?></small><small><?php $employee=$this->Employee->get_info($receipt['employee_id']); echo html_escape(trim($employee->first_name.' '.$employee->last_name)); ?></small></div><?php if ($branch['can_authorize']) { ?><a class="sv-review" href="<?php echo site_url('home/receiving_request/'.(int)$receipt['receiving_id']); ?>" aria-label="Revisar solicitud <?php echo (int)$receipt['receiving_id']; ?>">Revisar →</a><?php } else { ?><small>Sin permiso para autorizar</small><?php } ?></div><?php } ?>

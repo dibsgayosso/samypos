@@ -267,13 +267,13 @@ if ($data['can_view_register_difference'])
 	$data['last_register_close'] = $this->Register->get_last_closed_register_summary($current_location_id);
 }
 $data['current_location_name'] = $current_location->name;
-$data['location_sales'] = $this->get_today_location_sales();
+$data['location_sales'] = ($data['can_view_supervisor_dashboard'] || $data['can_view_owner_dashboard']) ? array() : $this->get_today_location_sales();
 $data['message']  = "";
 		
 		if ($data['can_supervise'] || $this->Employee->has_module_action_permission('reports', 'view_dashboard_stats', $this->Employee->get_logged_in_employee_info()->person_id))
 		{	
 			$data['payment_breakdown'] = $this->get_today_payment_breakdown($current_location_id);
-			if (!$data['can_view_owner_dashboard']) $data['month_sale'] = $this->sales_widget();
+			if (!$data['can_view_owner_dashboard'] && !$data['can_view_supervisor_dashboard']) $data['month_sale'] = $this->sales_widget();
 		}
 		$this->load->helper('demo');
 		$data['can_show_mercury_activate'] = (!is_on_demo_host() && !$this->config->item('mercury_activate_seen')) && !$this->Location->get_info_for_key('enable_credit_card_processing') && $this->config->item('branding_code') == 'phppointofsale';		
