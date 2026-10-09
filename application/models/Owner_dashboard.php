@@ -52,6 +52,8 @@ class Owner_dashboard extends CI_Model
     protected function branch($id,$day,$person)
     {
         $result=self::empty_totals();
+        $result['pending_requests']=array();
+        $result['can_authorize']=$this->Employee->has_module_permission('receivings',$person) && $this->Employee->has_module_action_permission('receivings','authorize_receivings',$person,$id);
         // A debt payment and a return are not the most recent merchandise sale.
         $last=$this->db->select('UNIX_TIMESTAMP(MAX(sale_time)) AS last_sale',FALSE)->from('sales')->where('location_id',$id)
             ->where('deleted',0)->where('suspended',0)->where('store_account_payment',0)->where('total >=',0)->get()->row_array();
@@ -65,6 +67,7 @@ class Owner_dashboard extends CI_Model
             $pending=$this->db->select('COUNT(*) AS operations, COALESCE(SUM(total),0) AS amount',FALSE)->from('receiving_requests')
                 ->where('location_id',$id)->where('status','pending')->get()->row_array();
             $result['pending_count']=(int)$pending['operations']; $result['pending_total']=(float)$pending['amount'];
+            if ($result['pending_count']) $result['pending_requests']=$this->db->select('id,receiving_time,total,employee_id')->from('receiving_requests')->where('location_id',$id)->where('status','pending')->order_by('id','DESC')->get()->result_array();
         }
         $expenses=$this->db->select('COALESCE('.$this->db->dbprefix('expenses_categories').'.name, \'Sin categoría\') AS category, COUNT(*) AS operations, COALESCE(SUM(expense_amount+expense_tax),0) AS amount',FALSE)
             ->from('expenses')->join('expenses_categories','expenses_categories.id=expenses.category_id','left')->where('expenses.location_id',$id)->where('expenses.deleted',0)

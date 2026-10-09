@@ -26,7 +26,7 @@ class OwnerQuery {
         switch ($query['table']) {
             case 'sales': $rows=array(array('last_sale'=>time()-120)); break;
             case 'receivings': $rows=array(array('operations'=>2,'amount'=>150)); break;
-            case 'receiving_requests': $rows=array(array('operations'=>1,'amount'=>99)); break;
+            case 'receiving_requests': $rows=strpos($query['select'],'COUNT')!==FALSE ? array(array('operations'=>1,'amount'=>99)) : array(array('id'=>19,'total'=>99,'receiving_time'=>'2026-10-08 12:00:00','employee_id'=>12)); break;
             case 'expenses': $rows=array(array('category'=>'Luz <script>','operations'=>1,'amount'=>58),array('category'=>'Sin categoría','operations'=>2,'amount'=>42)); break;
             case 'customers': $rows=array(array('debt'=>500,'in_favor'=>40,'customers'=>2)); break;
             case 'register_log': $rows=array(array('register_log_id'=>9,'employee_id_close'=>12,'register_name'=>'Caja 1','shift_end'=>'2026-10-06 22:00:00')); break;
@@ -76,11 +76,16 @@ $model->db->ready=FALSE;
 $no_migration=$model->snapshot(10,$loader); check(!$no_migration['receiving_ready'],'Missing authorization migration shown explicitly');
 function html_escape($s) {return htmlspecialchars((string)$s,ENT_QUOTES,'UTF-8');}
 function to_currency($value) {return '$'.number_format($value,2);}
+function site_url($path) {return '/index.php/'.$path;}
 $owner_dashboard=$dashboard;
 ob_start(); require APPPATH.'views/owner_panel.php'; $html=ob_get_clean();
 check(strpos($html,'<script>')===FALSE && strpos($html,'&lt;script&gt;')!==FALSE,'Escape branch and expense names');
 check(strpos($html,'Faltante')!==FALSE && strpos($html,'Transferencia: BBVA')!==FALSE,'Render cut warning and exact payment names');
 check(substr_count($html,'class="ow-branch"')===2 && strpos($html,'stroke-dasharray=')!==FALSE,'Render illustrated branch cards and payment chart');
+check(strpos($html,'home/receiving_request/19')!==FALSE,'Owner can open pending receiving review');
+$readonly=$dashboard; foreach ($readonly['branches'] as &$b) $b['can_authorize']=FALSE; unset($b);
+$owner_dashboard=$readonly; ob_start(); require APPPATH.'views/owner_panel.php'; $readonly_html=ob_get_clean();
+check(strpos($readonly_html,'home/receiving_request/')===FALSE,'Owner panel alone must not grant authorization');
 $private=$dashboard; foreach ($private['branches'] as &$private_branch) $private_branch['can_view_difference']=FALSE; unset($private_branch);
 $owner_dashboard=$private; ob_start(); require APPPATH.'views/owner_panel.php'; $private_html=ob_get_clean();
 check(strpos($private_html,'Faltante')===FALSE && strpos($private_html,'Sin permiso para ver diferencias')!==FALSE,'Illustrated cut card must hide differences without permission');

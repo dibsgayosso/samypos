@@ -45,6 +45,15 @@
     <div class="ow-metric">◎ Créditos<strong><?php echo to_currency($branch['credit_balance']); ?></strong><small><?php echo (int)$branch['credit_customers']; ?> clientes con deuda</small><?php if ($branch['credit_in_favor']>0) { ?><small>A favor: <?php echo to_currency($branch['credit_in_favor']); ?></small><?php } ?></div>
     <div class="ow-metric">↓ Gastos<strong><?php echo to_currency($branch['expenses_total']); ?></strong><small><?php echo (int)$branch['expenses_count']; ?> registros con impuestos</small></div>
    </div>
+   <?php if (!empty($branch['pending_requests'])) { ?>
+   <div class="ow-pending" style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:16px;margin:15px 0">
+    <h4>Mercancía pendiente de autorización</h4>
+    <?php foreach ($branch['pending_requests'] as $request) { ?>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid #fde68a">
+     <div><strong>Solicitud #<?php echo (int)$request['id']; ?> · <?php echo to_currency($request['total']); ?></strong><br><small><?php echo html_escape($request['receiving_time']); ?> · Empleado #<?php echo (int)$request['employee_id']; ?></small></div>
+     <?php if (!empty($branch['can_authorize'])) { ?><a class="btn btn-primary" href="<?php echo site_url('home/receiving_request/'.(int)$request['id']); ?>">Revisar y autorizar →</a><?php } else { ?><span>Requiere permiso de autorizar recepciones</span><?php } ?>
+    </div><?php } ?>
+   </div><?php } ?>
    <div class="ow-cut">Último corte de caja
     <?php if (!$branch['can_view_difference']) { ?><p>Sin permiso para ver diferencias</p><?php } elseif (!$branch['last_close']) { ?><p>Sin corte cerrado</p><?php } else { $close=$branch['last_close']; $difference=(float)$close['difference']; ?>
      <strong class="<?php echo $difference<-.005 ? 'owner-negative' : 'owner-positive'; ?>"><?php echo to_currency($difference); ?> · <?php echo $difference<-.005 ? 'Faltante' : ($difference>.005 ? 'Sobrante' : 'Sin diferencia'); ?></strong><small><?php echo html_escape($close['shift_end']); ?></small><small><?php echo html_escape($close['employee_name'].' · '.$close['register_name']); ?></small>
