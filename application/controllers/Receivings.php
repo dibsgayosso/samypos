@@ -742,6 +742,8 @@ class Receivings extends Secure_area
             catch (Throwable $error) { log_message('error','Receiving supervisor push queued for retry'); }
             $this->session->unset_userdata('receiving_submission_key');
             $this->cart->destroy();
+            // Persist the empty cart before redirecting; destroy() only resets memory.
+            $this->cart->save();
             $this->session->set_flashdata('supervisor_result','Solicitud #'.$id.' enviada al supervisor. El inventario sigue sin cambios.');
             redirect('home/receiving_request/'.$id);
             return;
