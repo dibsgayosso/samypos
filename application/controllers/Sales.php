@@ -647,6 +647,21 @@ function index($dont_switch_employee = 0)
 		echo json_encode(H($suggestions));
 	}
 
+
+    private function customer_phone_missing()
+    {
+        if (!$this->cart->customer_id) return FALSE;
+        // Read the current profile each time; updating the customer releases the block.
+        $customer=$this->Customer->get_info($this->cart->customer_id,FALSE);
+        return !$customer || trim((string)$customer->phone_number)==='';
+    }
+    private function require_customer_phone($is_ajax=TRUE)
+    {
+        if (!$this->customer_phone_missing()) return TRUE;
+        $this->_reload(array('customer_phone_required'=>TRUE),$is_ajax);
+        return FALSE;
+    }
+
 	function select_customer()
 	{
 		if ($this->config->item('enable_customer_quick_add') && strpos($this->input->post('customer'),'QUICK_ADD|') !== FALSE)
@@ -964,7 +979,8 @@ $data['error'] = lang('sales_salesperson_id_not_found');
 
 	//Alain Multiple Payments
 	function add_payment()
-	{		
+	{
+        if (!$this->require_customer_phone()) return;		
 		//Percent of amount due
 		if(strpos($this->input->post('amount_tendered'),'%') !== FALSE)
 		{
@@ -2152,6 +2168,7 @@ $data['error'] = lang('sales_salesperson_id_not_found');
 
 		function complete()
 	{
+        if (!$this->require_customer_phone(FALSE)) return;
 		if (!$this->Employee->has_module_action_permission('sales', 'complete_sale', $this->Employee->get_logged_in_employee_info()->person_id))
 		{		
 			$this->_reload(array('error' => lang('sales_you_do_not_have_permission_to_complete_sales')), false);
@@ -3332,7 +3349,8 @@ $data['error'] = lang('sales_salesperson_id_not_found');
 	}
 	
 	function _reload($data=array(), $is_ajax = true)
-	{	
+	{
+        $data['customer_phone_required']=$this->customer_phone_missing();	
 		//This is used for upgrade installs that never had this set (sales in progress)
 		if ($this->cart->limit === NULL)
 		{
