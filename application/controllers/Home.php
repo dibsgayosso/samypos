@@ -191,6 +191,40 @@ class Home extends Secure_area
         $this->load->view('supervisor_panel',$this->supervisor_data());
     }
 
+
+    public function supervisor_transfers($location_id=0)
+    {
+        $this->load->model('Supervisor_dashboard');
+        $id=(int)$location_id;
+        if (!in_array($id,$this->Supervisor_dashboard->allowed_locations($this->session->userdata('person_id')),TRUE)) { show_error('Sin permiso para esta sucursal',403); return; }
+        $location=$this->Location->get_info($id);
+        if (!$location || !$location->location_id || $location->deleted) { show_404(); return; }
+        $zone=date_default_timezone_get();
+        $timezone=$location->timezone ?: $zone;
+        if (!in_array($timezone,timezone_identifiers_list(),TRUE)) $timezone=$zone;
+        $this->output->set_header('Cache-Control: no-store');
+        $debug=$this->db->db_debug; $this->db->db_debug=FALSE;
+        try {
+            date_default_timezone_set($timezone);
+            $day=date('d/m/Y');
+            $sales=$this->db->select('sale_id,sale_time,total')->from('sales')
+                ->where('location_id',$id)->where('deleted',0)->where('suspended',0)->where('store_account_payment',0)
+                ->where('sale_time >=',date('Y-m-d 00:00:00'))->where('sale_time <',date('Y-m-d 00:00:00',strtotime('+1 day')))
+                ->order_by('sale_time','DESC')->order_by('sale_id','DESC')->get()->result_array();
+            $totals=array(); foreach ($sales as $sale) $totals[$sale['sale_id']]=$sale['total'];
+            $payments=$totals ? $this->Sale->get_payment_data_grouped_by_sale($this->Sale->_get_all_sale_payments(array_keys($totals),TRUE),$totals) : array();
+            $report=$this->Supervisor_dashboard->transfer_sales($sales,$payments);
+            $pages=max(1,(int)ceil(count($report['rows'])/50));
+            $page=max(1,min($pages,(int)$this->input->get('page')));
+            $report['rows']=array_slice($report['rows'],($page-1)*50,50);
+            $data=array('transfer_report'=>$report,'branch_name'=>$location->name,'branch_id'=>$id,'day'=>$day,'page'=>$page,'pages'=>$pages);
+        } catch (Throwable $error) {
+            log_message('error','Supervisor transfer report failed: '.$error->getMessage());
+            $data=array('report_error'=>TRUE);
+        } finally { date_default_timezone_set($zone); $this->db->db_debug=$debug; }
+        $this->load->view('supervisor_transfers',$data);
+    }
+
     public function my_receiving_requests()
     {
         $this->load->model('Supervisor_dashboard');

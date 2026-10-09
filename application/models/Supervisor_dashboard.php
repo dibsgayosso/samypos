@@ -23,6 +23,26 @@ class Supervisor_dashboard extends CI_Model
         }
         return $result;
     }
+    public static function transfer_sales($sales,$payments)
+    {
+        $report=array('rows'=>array(),'total'=>0,'operations'=>0,'tickets'=>0);
+        foreach ($sales as $sale) {
+            $summary=array();
+            foreach (isset($payments[$sale['sale_id']]) ? $payments[$sale['sale_id']] : array() as $payment) {
+                if ((float)$payment['payment_amount']==0) continue;
+                $label=$payment['payment_type'];
+                if (!preg_match('/^(transferencia(?:s)?\\b|transfer\\b|bank transfer\\b|spei\\b)/iu',trim($label))) continue;
+                if (!isset($summary[$label])) $summary[$label]=0;
+                $summary[$label]+=(float)$payment['payment_amount'];
+            }
+            if ($summary) $report['tickets']++;
+            foreach ($summary as $label=>$amount) {
+                $report['rows'][]=array('sale_id'=>$sale['sale_id'],'sale_time'=>$sale['sale_time'],'method'=>$label,'amount'=>$amount);
+                $report['total']+=$amount; $report['operations']++;
+            }
+        }
+        return $report;
+    }
     public function snapshot($person,$payment_loader)
     {
         $branches=array(); $zone=date_default_timezone_get();

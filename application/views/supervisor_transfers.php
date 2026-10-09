@@ -1,0 +1,15 @@
+<?php defined('BASEPATH') OR exit('No direct script access allowed'); $this->load->view('partial/header'); ?>
+<style>.st-report{margin:20px 0;color:#172554}.st-head{background:linear-gradient(120deg,#172554,#4338ca);color:white;padding:24px;border-radius:18px;margin:15px 0}.st-head h2{color:white!important}.st-cards{display:flex;gap:16px;flex-wrap:wrap;margin:18px 0}.st-card{padding:18px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:14px;flex:1}.st-card strong{display:block;font-size:25px}.st-table{background:white;border-radius:14px;padding:18px;overflow-x:auto}.st-table table{width:100%}.st-table th,.st-table td{padding:12px;border-bottom:1px solid #e2e8f0}.st-amount{text-align:right}.st-pagination{display:flex;gap:15px;align-items:center;margin:18px 0}</style>
+<section class="st-report">
+<a class="btn btn-default" href="<?php echo site_url('home'); ?>">← Volver al panel</a>
+<?php if (!empty($report_error)) { ?><div class="alert alert-danger">No se pudo cargar el resumen de transferencias. Revisa el registro de errores del servidor.</div><?php } else { ?>
+<div class="st-head"><h2>Ventas por transferencia</h2><p><?php echo html_escape($branch_name); ?> · <?php echo html_escape($day); ?></p></div>
+<div class="st-cards"><div class="st-card">Importe en transferencias<strong><?php echo to_currency($transfer_report['total']); ?></strong></div><div class="st-card">Operaciones por método<strong><?php echo (int)$transfer_report['operations']; ?></strong></div><div class="st-card">Tickets con transferencias<strong><?php echo (int)$transfer_report['tickets']; ?></strong></div></div>
+<p>Solo pagos por transferencia de hoy. Incluye devoluciones; los pagos combinados muestran únicamente el importe de transferencia. Un ticket con distintos métodos de transferencia aparece una vez por método.</p>
+<div class="st-table"><table><thead><tr><th>Ticket</th><th>Fecha y hora</th><th>Método</th><th class="st-amount">Importe por transferencia</th></tr></thead><tbody>
+<?php foreach ($transfer_report['rows'] as $row) { ?><tr><td>#<?php echo (int)$row['sale_id']; ?></td><td><?php echo html_escape($row['sale_time']); ?></td><td><?php echo html_escape($row['method']); ?></td><td class="st-amount"><?php echo to_currency($row['amount']); ?></td></tr><?php } ?>
+<?php if (!$transfer_report['rows']) { ?><tr><td colspan="4">No hay ventas pagadas por transferencia hoy en esta sucursal.</td></tr><?php } ?>
+</tbody></table></div>
+<nav class="st-pagination" aria-label="Páginas del resumen"><?php if ($page>1) { ?><a class="btn btn-default" href="<?php echo site_url('home/supervisor_transfers/'.$branch_id).'?page='.($page-1); ?>">Anterior</a><?php } ?><span>Página <?php echo (int)$page; ?> de <?php echo (int)$pages; ?></span><?php if ($page<$pages) { ?><a class="btn btn-default" href="<?php echo site_url('home/supervisor_transfers/'.$branch_id).'?page='.($page+1); ?>">Siguiente</a><?php } ?></nav>
+<?php } ?></section>
+<?php $this->load->view('partial/footer'); ?>

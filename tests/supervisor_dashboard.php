@@ -50,3 +50,12 @@ check(!$model->snapshot(1,$loader)['branches'] && !$loaded,'No reports module mu
 check(strpos($renderer->render(array('error'=>TRUE)),'No se pudo cargar')!==FALSE,'Visible error fallback');
 if (isset($argv[1])) file_put_contents($argv[1],'<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><body style="font-family:Arial;background:#f1f5f9;margin:24px">'.$html.'</body>');
 echo "Supervisor branch permissions, timezones, charts and rendering tests passed\n";
+
+$transfer_rows=Supervisor_dashboard::transfer_sales(
+ array(array('sale_id'=>1,'sale_time'=>'2026-10-08 12:00:00','total'=>900),array('sale_id'=>2,'sale_time'=>'2026-10-08 13:00:00','total'=>-100)),
+ array(1=>array(array('payment_type'=>'Efectivo','payment_amount'=>600),array('payment_type'=>'Transferencia BBVA','payment_amount'=>300),array('payment_type'=>'SPEI','payment_amount'=>50)),
+ 2=>array(array('payment_type'=>'Transferencia BBVA','payment_amount'=>-100))));
+check($transfer_rows['total']===250.0 && $transfer_rows['operations']===3 && $transfer_rows['tickets']===2,'Transfer summary includes refunds and counts methods separately');
+check(count($transfer_rows['rows'])===3 && !isset($transfer_rows['rows'][0]['total']) && $transfer_rows['rows'][0]['amount']===300.0,'Mixed payments expose only allocated transfer amounts');
+check(strpos(file_get_contents(dirname(__DIR__).'/application/views/supervisor_panel.php'),'home/supervisor_transfers/')!==FALSE,'Branch operations link to transfer summary');
+echo "Transfer detail projection tests passed\n";
