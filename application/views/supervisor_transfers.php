@@ -3,9 +3,9 @@
 <section class="st-report">
 <a class="btn btn-default" href="<?php echo site_url('home'); ?>">← Volver al panel</a>
 <?php if (!empty($report_error)) { ?><div class="alert alert-danger">No se pudo cargar el resumen de transferencias. Revisa el registro de errores del servidor.</div><?php } else { ?>
-<div class="st-head"><h2>Ventas por transferencia</h2><p><?php echo html_escape($branch_name); ?> · <?php echo html_escape($day); ?></p></div>
+<div class="st-head"><h2>Ventas y abonos por transferencia</h2><p><?php echo html_escape($branch_name); ?> · <?php echo html_escape($day); ?></p></div>
 <div class="st-cards"><div class="st-card">Importe en transferencias<strong><?php echo to_currency($transfer_report['total']); ?></strong></div><div class="st-card">Operaciones por método<strong><?php echo (int)$transfer_report['operations']; ?></strong></div><div class="st-card">Tickets con transferencias<strong><?php echo (int)$transfer_report['tickets']; ?></strong></div></div>
-<p>Solo pagos por transferencia de hoy. Incluye devoluciones; los pagos combinados muestran únicamente el importe de transferencia. Un ticket con distintos métodos de transferencia aparece una vez por método.</p>
+<p>Pagos por transferencia de hoy: ventas y abonos a crédito. Incluye devoluciones; los pagos combinados muestran únicamente el importe de transferencia. Un ticket con distintos métodos de transferencia aparece una vez por método.</p>
 <div class="st-table"><table><thead><tr><th>Ticket</th><th>Fecha y hora</th><th>Método</th><th class="st-amount">Importe por transferencia</th></tr></thead><tbody>
 <?php foreach ($transfer_report['rows'] as $row) { ?><tr><td>#<?php echo (int)$row['sale_id']; ?></td><td><?php echo html_escape($row['sale_time']); ?></td><td><?php echo html_escape($row['method']); ?></td><td class="st-amount"><?php echo to_currency($row['amount']); ?></td></tr><?php } ?>
 <?php if (!$transfer_report['rows']) { ?><tr><td colspan="4">No hay ventas pagadas por transferencia hoy en esta sucursal.</td></tr><?php } ?>

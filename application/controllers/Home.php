@@ -175,7 +175,7 @@ class Home extends Secure_area
         $debug=$this->db->db_debug; $this->db->db_debug=FALSE;
         try {
             $dashboard=$this->Supervisor_dashboard->snapshot($this->session->userdata('person_id'),function($id) {
-                return $this->get_today_payment_breakdown($id,TRUE);
+                return $this->get_today_payment_breakdown($id,FALSE);
             });
         } catch (Throwable $error) {
             log_message('error','Supervisor dashboard failed: '.$error->getMessage());
@@ -208,7 +208,7 @@ class Home extends Secure_area
             date_default_timezone_set($timezone);
             $day=date('d/m/Y');
             $sales=$this->db->select('sale_id,sale_time,total')->from('sales')
-                ->where('location_id',$id)->where('deleted',0)->where('suspended',0)->where('store_account_payment',0)
+                ->where('location_id',$id)->where('deleted',0)->where('suspended',0)
                 ->where('sale_time >=',date('Y-m-d 00:00:00'))->where('sale_time <',date('Y-m-d 00:00:00',strtotime('+1 day')))
                 ->order_by('sale_time','DESC')->order_by('sale_id','DESC')->get()->result_array();
             $totals=array(); foreach ($sales as $sale) $totals[$sale['sale_id']]=$sale['total'];
