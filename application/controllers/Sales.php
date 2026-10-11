@@ -655,8 +655,23 @@ function index($dont_switch_employee = 0)
         $customer=$this->Customer->get_info($this->cart->customer_id,FALSE);
         return !$customer || trim((string)$customer->phone_number)==='';
     }
-    private function require_customer_phone($is_ajax=TRUE)
+    private function uses_line_of_credit($payment_type=NULL,$amount=0)
     {
+        // Receiving an installment does not create a new credit sale.
+        if ($this->cart->get_mode()==='store_account_payment') return FALSE;
+        $labels=get_all_language_values_for_key('common_store_account','common');
+        $labels[]=lang('common_store_account');
+        $labels[]='common_store_account';
+        $labels=array_filter(array_unique($labels));
+        if ($amount>0 && in_array($payment_type,$labels,TRUE)) return TRUE;
+        foreach ($labels as $label) {
+            if ($this->cart->get_payment_amount($label)>0) return TRUE;
+        }
+        return FALSE;
+    }
+    private function require_customer_phone($is_ajax=TRUE,$payment_type=NULL,$amount=0)
+    {
+        if (!$this->uses_line_of_credit($payment_type,$amount)) return TRUE;
         if (!$this->customer_phone_missing()) return TRUE;
         $this->_reload(array('customer_phone_required'=>TRUE),$is_ajax);
         return FALSE;
@@ -980,7 +995,7 @@ $data['error'] = lang('sales_salesperson_id_not_found');
 	//Alain Multiple Payments
 	function add_payment()
 	{
-        if (!$this->require_customer_phone()) return;		
+        if (!$this->require_customer_phone(TRUE,$this->input->post('payment_type'),(float)$this->input->post('amount_tendered'))) return;
 		//Percent of amount due
 		if(strpos($this->input->post('amount_tendered'),'%') !== FALSE)
 		{
@@ -3350,7 +3365,7 @@ $data['error'] = lang('sales_salesperson_id_not_found');
 	
 	function _reload($data=array(), $is_ajax = true)
 	{
-        $data['customer_phone_required']=$this->customer_phone_missing();	
+        $data['customer_phone_required']=!empty($data['customer_phone_required']) || ($this->uses_line_of_credit() && $this->customer_phone_missing());
 		//This is used for upgrade installs that never had this set (sales in progress)
 		if ($this->cart->limit === NULL)
 		{

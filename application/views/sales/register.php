@@ -4648,10 +4648,10 @@ if ($this->Employee->has_module_action_permission('sales', 'allow_customer_searc
 	</script>
 	
 <?php if (!empty($customer_phone_required)) { ?>
-<div class="alert alert-warning" role="alert">Este cliente no tiene un número de teléfono registrado. Debe actualizar sus datos. Por favor, contacta a Dibs para poder continuar con la venta.</div>
+<div class="alert alert-warning" role="alert">Este cliente no tiene un número de teléfono registrado. Contacte a Dibs para actualizar la información del cliente y poder procesar la venta a línea de crédito.</div>
 <script>
 (function(){
- var message='Este cliente no tiene un número de teléfono registrado. Debe actualizar sus datos. Por favor, contacta a Dibs para poder continuar con la venta.';
+ var message='Este cliente no tiene un número de teléfono registrado. Contacte a Dibs para actualizar la información del cliente y poder procesar la venta a línea de crédito.';
  if(window.bootbox){bootbox.alert({title:'Actualizar datos del cliente',message:message});}
  else {window.alert(message);}
 })();
