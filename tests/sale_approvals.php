@@ -6,7 +6,7 @@ class CI_Model {}
 class MY_Model extends CI_Model {}
 function check($condition,$message) { if (!$condition) throw new RuntimeException($message); }
 function log_message($level,$message) {}
-function get_all_language_values_for_key($key,$file) { return $key==='common_cash' ? array('Cash','Efectivo') : array('Gift Card','Tarjeta de regalo'); }
+function get_all_language_values_for_key($key,$file) { throw new RuntimeException('Approval checks must never switch the active application language'); }
 require APPPATH.'models/Sale_approvals.php';
 require APPPATH.'models/Sale.php';
 class ConfigStub { public $value='["Transferencia","common_cash","common_giftcard"]'; function item($key) { return $this->value; } }

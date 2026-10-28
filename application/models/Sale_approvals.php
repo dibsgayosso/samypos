@@ -7,12 +7,39 @@ class Sale_approvals extends CI_Model
         $methods=json_decode((string)$this->config->item('sale_approval_payment_methods'),TRUE);
         return is_array($methods) ? array_values(array_filter($methods,'is_string')) : array();
     }
+    private $approval_labels=NULL;
+    private $approval_methods_key=NULL;
+    private function payment_labels()
+    {
+        $methods=$this->methods();
+        $key=serialize($methods);
+        if ($this->approval_labels !== NULL && $key===$this->approval_methods_key) return $this->approval_labels;
+        $this->approval_methods_key=$key;
+        $this->approval_labels=array();
+        $standard=array('common_cash','common_check','common_giftcard','common_debit','common_credit',
+            'common_store_account','common_points','common_ebt','common_ebt_cash');
+        foreach ($methods as $method) $this->approval_labels[$method]=array($method);
+        $standard=array_intersect($standard,$methods);
+        if (!$standard) return $this->approval_labels;
+        // Read translations locally once. Do not switch the active application language
+        // while rendering JavaScript or reload every loaded language file per payment.
+        foreach (glob(APPPATH.'language/*/common_lang.php') ?: array() as $file) {
+            $translations=(static function($path) { $lang=array(); include $path; return $lang; })($file);
+            foreach ($standard as $method) {
+                if (isset($translations[$method])) $this->approval_labels[$method][]=$translations[$method];
+            }
+        }
+        return $this->approval_labels;
+    }
     public function required($cart)
     {
-        foreach ($cart->get_payments() as $payment) {
+        $payments=$cart->get_payments();
+        if (!$payments) return FALSE;
+        $labels_by_method=$this->payment_labels();
+        if (!$labels_by_method) return FALSE;
+        foreach ($payments as $payment) {
             $type=$payment->payment_type;
-            foreach ($this->methods() as $method) {
-                $labels=strpos($method,'common_')===0 ? get_all_language_values_for_key($method,'common') : array($method);
+            foreach ($labels_by_method as $method=>$labels) {
                 foreach ($labels as $label) {
                     if ((float)$payment->payment_amount != 0 && ($type===$label || ($method==='common_giftcard' && strpos($type,$label.':')===0))) return TRUE;
                 }

@@ -3404,6 +3404,8 @@ $data['error'] = lang('sales_salesperson_id_not_found');
 	
 	function _reload($data=array(), $is_ajax = true)
 	{
+        // A browser navigation needs the full page, including CSS and scripts.
+        $is_ajax = $is_ajax && $this->input->is_ajax_request();
         $data['customer_phone_required']=!empty($data['customer_phone_required']) || ($this->uses_line_of_credit() && $this->customer_phone_missing());
 		//This is used for upgrade installs that never had this set (sales in progress)
 		if ($this->cart->limit === NULL)
