@@ -1,3 +1,4 @@
+<?php $this->load->model('Sale_approvals'); ?>
 <script>
 	
     <?php 
@@ -1846,7 +1847,7 @@ if ($this->config->item('enable_customer_quick_add') && $this->Employee->has_mod
 							'data-title' => lang('common_payment_amount')));	?>
 						<span class="input-group-addon">
 							<a href="#" class="" id="add_payment_button"><?php echo lang('common_add_payment'); ?></a>
-							<a href="#" class="hidden" id="finish_sale_alternate_button"><?php echo lang('sales_complete_sale'); ?></a>
+							<a href="#" class="hidden" id="finish_sale_alternate_button"><?php echo ($this->Sale_approvals->required($this->cart) ? 'Enviar a aprobación' : lang('sales_complete_sale')); ?></a>
 						</span>
 
 					</div>
@@ -2042,7 +2043,7 @@ if ($this->config->item('enable_customer_quick_add') && $this->Employee->has_mod
 					<?php echo form_open("sales/complete", array('id' => 'finish_sale_form', 'autocomplete' => 'off')); ?>
 					<?php
 					if ($payments_cover_total && $customer_required_check) {
-						echo "<input type='button' class='btn btn-success btn-large btn-block' id='finish_sale_button' value='" . lang('sales_complete_sale') . "' />";
+						echo "<input type='button' class='btn btn-success btn-large btn-block' id='finish_sale_button' value='" . ($this->Sale_approvals->required($this->cart) ? 'Enviar a aprobación' : lang('sales_complete_sale')) . "' />";
 					}
 
 

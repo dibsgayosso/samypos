@@ -66,6 +66,33 @@ class Sales extends Secure_area
 
 	}
 
+public function approval_requests()
+{
+    $this->load->model('Sale_approvals');
+    $this->load->view('sale_approvals',array('requests'=>$this->Sale_approvals->listing()));
+}
+public function approval_request($id)
+{
+    $this->load->model('Sale_approvals');
+    $request=$this->Sale_approvals->detail((int)$id);
+    if (!$request) { show_error('Sin acceso a esta solicitud',403); return; }
+    if (!$this->session->userdata('sale_approval_token')) $this->session->set_userdata('sale_approval_token',bin2hex(random_bytes(32)));
+    $this->load->view('sale_approval_request',array('request'=>$request,
+        'can_authorize'=>$this->Sale_approvals->can_authorize() && (int)$request['employee_id']!==(int)$this->Employee->get_logged_in_employee_info()->person_id,
+        'approval_token'=>$this->session->userdata('sale_approval_token')));
+}
+public function decide_approval()
+{
+    $token=$this->input->post('approval_token');
+    if ($this->input->method(TRUE)!=='POST' || !is_string($token) || !$this->session->userdata('sale_approval_token') || !hash_equals($this->session->userdata('sale_approval_token'),$token)) { show_error('Solicitud inválida',403); return; }
+    $this->load->model('Sale_approvals');
+    $reason=$this->input->post('reason');
+    $ok=$this->Sale_approvals->decide((int)$this->input->post('request_id'),$this->Employee->get_logged_in_employee_info()->person_id,
+        $this->input->post('decision')==='reject',is_string($reason) ? substr($reason,0,1000) : '');
+    $this->session->set_flashdata('sale_approval_result',$ok ? 'Solicitud procesada.' : 'No se procesó. Revisa permisos, existencias, motivo y estado de la solicitud.');
+    redirect('sales/approval_request/'.(int)$this->input->post('request_id'));
+}
+
 private function initialize_sale_workspaces()
 {
 $sale_workspaces = $this->session->userdata('sale_workspaces');
@@ -2294,6 +2321,18 @@ $data['error'] = lang('sales_salesperson_id_not_found');
 		}
 		
 		
+        $this->load->model('Sale_approvals');
+        if ($this->Sale_approvals->required($this->cart)) {
+            if ($this->input->method(TRUE)!=='POST') { show_error('Usa el formulario de venta',405); return; }
+            if (!$this->session->userdata('sale_submission_key')) $this->session->set_userdata('sale_submission_key',bin2hex(random_bytes(32)));
+            $id=$this->Sale_approvals->stage($this->cart,$this->session->userdata('sale_submission_key'));
+            if (!$id) { $this->_reload(array('error'=>'No se envió la venta. Aplica la migración de autorizaciones y captura una venta nueva, sin editar una venta guardada.'),FALSE); return; }
+            $this->session->unset_userdata('sale_submission_key');
+            $this->cart->destroy(); $this->cart->save();
+            $this->session->set_flashdata('sale_approval_result','Venta #'.$id.' enviada a aprobación. Todavía no afecta inventario, caja ni reportes.');
+            redirect('sales/approval_request/'.$id); return;
+        }
+
 		$tier_id = $this->cart->selected_tier_id;
 		$tier_info = $this->Tier->get_info($tier_id);
 		$exchange_rate = $this->cart->get_exchange_rate() ? $this->cart->get_exchange_rate() : 1;
@@ -6686,6 +6725,9 @@ $data['error'] = lang('sales_salesperson_id_not_found');
 
     //new function
     function complete_excel_import_sale() {
+        $this->load->model('Sale_approvals');
+        if ($this->Sale_approvals->methods()) { show_error('Con aprobación de ventas activa, captura las ventas desde el punto de venta.',403); return; }
+
         ini_set('memory_limit', '1024M');
         set_time_limit(0);
         ini_set('max_input_time', '-1');

@@ -452,6 +452,7 @@ class Config extends Secure_area
 		'hide_customer_recent_sales'=>$this->input->post('hide_customer_recent_sales') ? 1 : 0,
 		'disable_confirmation_sale'=>$this->input->post('disable_confirmation_sale') ? 1 : 0,
 		'confirm_error_adding_item'=>$this->input->post('confirm_error_adding_item') ? 1 : 0,
+		'sale_approval_payment_methods' => json_encode(array_values(array_filter((array)$this->input->post('sale_approval_payment_methods'),'is_string'))),
 		'track_payment_types' => serialize($this->input->post('track_payment_types') ? $this->input->post('track_payment_types') : array()),
 		'number_of_items_per_page'=>$this->input->post('number_of_items_per_page'),
 		'additional_payment_types' => $this->input->post('additional_payment_types'),

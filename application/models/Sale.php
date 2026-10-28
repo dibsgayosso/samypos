@@ -5,6 +5,30 @@ require_once (APPPATH."models/cart/PHPPOSCartSale.php");
 class Sale extends MY_Model
 {
 	use saleTrait;
+    private $applying_sale_request=FALSE;
+    private $approval_context=array();
+    public function apply_sale_request($request)
+    {
+        $this->load->model('Sale_approvals');
+        if (!$this->Sale_approvals->can_authorize() || $request['status']!=='pending'
+            || (int)$request['employee_id']===(int)$this->Employee->get_logged_in_employee_info()->person_id
+            || (int)$request['location_id']!==(int)$this->Employee->get_logged_in_employee_current_location_id()) return -1;
+        $cart=unserialize(base64_decode($request['cart_payload'],TRUE),array('allowed_classes'=>array(
+            'PHPPOSCartSale','PHPPOSCartItemSale','PHPPOSCartItemKitSale','PHPPOSCartPaymentSale','PHPPOSCartDelivery','stdClass')));
+        if (!($cart instanceof PHPPOSCartSale) || $cart->sale_id) return -1;
+        if ($this->config->item('do_not_allow_out_of_stock_items_to_be_sold') && $cart->get_mode()!=='return') {
+            foreach ($cart->get_items() as $item) if ($item->out_of_stock()) return -1;
+        }
+        $cart->location_id=(int)$request['location_id'];
+        $cart->employee_id=(int)$request['employee_id'];
+        $cart->suspended=0;
+        $cart->skip_webhook=TRUE;
+        $this->approval_context=json_decode($request['context_json'],TRUE) ?: array();
+        $this->applying_sale_request=TRUE;
+        try { return $this->save($cart,FALSE); }
+        finally { $this->applying_sale_request=FALSE; $this->approval_context=array(); }
+    }
+
 	
 	public function __construct()
 	{
@@ -752,6 +776,9 @@ class Sale extends MY_Model
 			
 function save($cart, $async = TRUE)
 {
+    $this->load->model('Sale_approvals');
+    if (!$this->applying_sale_request && $this->Sale_approvals->required($cart)) return -1;
+
 $this->load->model('Sale_types');
 		$series_to_add = array();
 		$delivery_file_ids = array();
@@ -829,7 +856,7 @@ $this->load->model('Sale_types');
 		$is_new_sale = $sale_id ? false : true;
 		$this->load->model('Item_serial_number');
 		//Run these queries as a transaction, we want to make sure we do all or nothing
-		$this->db->trans_start();
+		if (!$this->applying_sale_request) $this->db->trans_start();
 			
 		$global_weighted_average_cost = FALSE;
 		
@@ -1499,8 +1526,8 @@ $this->load->model('Sale_types');
 						'day_number' => $cur_item_info->day_number,
 						'month' => $cur_item_info->month,
 						'day' => $cur_item_info->day,
-						'card_on_file_token' => $this->session->userdata('cc_token'),
-						'card_on_file_masked' => $this->session->userdata('masked_account'),
+						'card_on_file_token' => ($this->applying_sale_request ? (isset($this->approval_context['cc_token']) ? $this->approval_context['cc_token'] : NULL) : $this->session->userdata('cc_token')),
+						'card_on_file_masked' => ($this->applying_sale_request ? (isset($this->approval_context['masked_account']) ? $this->approval_context['masked_account'] : NULL) : $this->session->userdata('masked_account')),
 						'startup_cost' => $item->unit_price,
 						'recurring_charge_amount' => $this->Item->get_sale_price(array('ignore_recurring_price' => TRUE,'item_id' => $item->item_id,'variation_id' => $item->variation_id)),
 						'location_id' => $cart->location_id ? $cart->location_id : $this->Employee->get_logged_in_employee_current_location_id(),
@@ -1819,7 +1846,7 @@ $this->load->model('Sale_types');
 						}
 				
 						//send email 
-						if($this->Location->get_info_for_key('receive_stock_alert',$cart->location_id ? $cart->location_id : $this->Employee->get_logged_in_employee_current_location_id()) && $email)
+						if(!$this->applying_sale_request && $this->Location->get_info_for_key('receive_stock_alert',$cart->location_id ? $cart->location_id : $this->Employee->get_logged_in_employee_current_location_id()) && $email)
 						{			
 							$this->load->library('email');
 							$config = array();
@@ -2450,7 +2477,7 @@ $this->load->model('Sale_types');
 							}
 
 							//send email 
-							if($this->Location->get_info_for_key('receive_stock_alert',$cart->location_id ? $cart->location_id : $this->Employee->get_logged_in_employee_current_location_id()) && $email)
+							if(!$this->applying_sale_request && $this->Location->get_info_for_key('receive_stock_alert',$cart->location_id ? $cart->location_id : $this->Employee->get_logged_in_employee_current_location_id()) && $email)
 							{			
 								$this->load->library('email');
 								$config = array();
@@ -2637,16 +2664,16 @@ $this->load->model('Sale_types');
 		
 		}
 		
-		if ($this->session->userdata('cc_signature'))
+		if (($this->applying_sale_request ? (isset($this->approval_context['cc_signature']) ? $this->approval_context['cc_signature'] : NULL) : $this->session->userdata('cc_signature')))
 		{
-			$image = $this->session->userdata('cc_signature');
+			$image = ($this->applying_sale_request ? (isset($this->approval_context['cc_signature']) ? $this->approval_context['cc_signature'] : NULL) : $this->session->userdata('cc_signature'));
 	    	$image_file_id = $this->Appfile->save('signature_'.$sale_id.'.png', $image);
 			$this->update(array('signature_image_id' => $image_file_id), $sale_id);		
 			$cart->view_data['signature_file_id'] = $image_file_id;
 			$cart->save();
 		}
 		
-		$this->db->trans_complete();
+		if (!$this->applying_sale_request) $this->db->trans_complete();
 		
 		if ($this->db->trans_status() === FALSE)
 		{
@@ -2700,7 +2727,7 @@ $this->load->model('Sale_types');
 				$invoice_id = $invoice_data['invoice_id'];				
 			}
 			
-			if ($this->config->item('automatically_email_invoice'))
+			if (!$this->applying_sale_request && $this->config->item('automatically_email_invoice'))
 			{
 				$this->email_invoice('customer', $invoice_id);
 			}
@@ -2725,7 +2752,7 @@ $this->load->model('Sale_types');
 			$this->db->update('sales_items',array('series_id' => $series_id));
 		}
 		
-		if($this->Location->get_info_for_key('sidekick_auto_review') && $cart->customer_id){
+		if(!$this->applying_sale_request && $this->Location->get_info_for_key('sidekick_auto_review') && $cart->customer_id){
 			//sidekick insert/update
 			$location = $this->Location->get_info($this->Employee->get_logged_in_employee_current_location_id());
 			$customer = $this->Customer->get_info($cart->customer_id);
@@ -5885,6 +5912,8 @@ $this->load->model('Sale_types');
 	}
 	
     public function save_sale_data($sales_data) {
+        $this->load->model('Sale_approvals');
+        if ($this->Sale_approvals->methods()) return FALSE;
         $this->db->insert('sales', $sales_data);
         $sale_id = $this->db->insert_id();
         return $sale_id;
