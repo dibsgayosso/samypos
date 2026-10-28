@@ -87,3 +87,4 @@ jobs:
           php -l application/views/sale_approval_request.php
           php -l application/migrations/20261028010000_sale_approvals.php
           php tests/sale_approvals.php
+          php tests/sale_approval_view.php
