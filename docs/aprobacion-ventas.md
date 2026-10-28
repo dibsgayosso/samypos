@@ -1,0 +1,19 @@
+# Aprobación de ventas por método de pago
+
+Aplicar `20261028010000_sale_approvals` mediante `index.php/migrate/start` después de respaldar la base. En Ajustes/Configuración → Ventas, seleccionar **Ventas que requieren aprobación** y guardar. Admite métodos estándar y adicionales; conserva los nombres personalizados. Los métodos estándar se reconocen en los idiomas del POS. Sin selección, continúa el flujo habitual.
+
+En Empleados → permisos de Ventas, asignar **Autorizar ventas por método de pago**, acceso a Ventas y las sucursales correspondientes a las cuentas supervisoras. No se asigna automáticamente. Desde Inicio → **Aprobación de ventas** se revisan las solicitudes de la sucursal actual. Cambiar de sucursal mediante el selector habitual para revisar otra. El capturista ve sus solicitudes; el supervisor ve las de su sucursal. La bandeja y las solicitudes pendientes se actualizan cada 30 segundos mientras estén visibles. Este flujo usa avisos en pantalla; las notificaciones push existentes siguen siendo de mercancía.
+
+Al cobrar una venta nueva, si cualquier pago de importe distinto de cero usa un método seleccionado, el botón indica **Enviar a aprobación**. También aplica a pagos combinados y devoluciones con esos métodos. Se verifica que el pago cubra el total. La captura queda en `sale_requests`, separada de las ventas: no descuenta inventario ni modifica caja, puntos, tarjetas de regalo, saldo del cliente, facturas o reportes. El inventario no se reserva mientras espera.
+
+Otra cuenta con permiso debe comprobar el pago y autorizar. Se guarda capturista, sucursal, caja de origen, supervisor, fecha y venta resultante. Se aplica el guardado nativo con inventario síncrono dentro de la transacción de aprobación; el bloqueo de fila impide aplicar dos veces. Se revalida la restricción de existencias al autorizar. El recibo definitivo aparece únicamente después de autorizar. Rechazar exige motivo y no aplica la venta; para corregir, capturar una solicitud nueva. Cambiar los métodos de Ajustes no libera solicitudes ya enviadas.
+
+Las ventas históricas y sus reportes se conservan. No se permite enviar una venta guardada (incluida una suspendida) como solicitud nueva ni guardar directamente con un método seleccionado: usar una captura nueva. Las rutas de API/offline que llaman `Sale::save` fallan con el retorno de error nativo cuando requieren aprobación; no encolan automáticamente. Con la política activa se bloquea la importación de ventas de Excel, que usa escrituras directas. Las cotizaciones con métodos seleccionados tampoco pueden guardarse por ese camino.
+
+La autorización no realiza cargos ni reembolsos en la terminal bancaria. Si hubo un cargo integrado previo, rechazar la solicitud no revierte ese cargo: debe conciliarse y devolverse por el proceso de la terminal. Se suprimen webhooks, correos automáticos de factura/alertas de stock y Sidekick dentro de la autorización para no emitir efectos externos de una transacción que podría revertirse. No se envían correos desde este nuevo flujo.
+
+## Verificación
+
+`php tests/sale_approvals.php` prueba selección, pagos combinados, importe cero, traducciones, tarjeta de regalo con identificador, devoluciones, permiso revocado, sucursal, identidad del supervisor, autoaprobación, rechazo, reversión ante errores y autorización duplicada. Incluye bloqueo del guardado directo e importación. Usa dobles de base/inventario; no sustituye una prueba contra MySQL.
+
+Antes de desplegar, probar con copia de la base y tablas InnoDB: efectivo sin seleccionar; transferencia seleccionada; pago combinado; rechazo; doble POST; cambios de permisos y sucursal; existencias agotadas mientras espera; variante, kit, serie, entrega, moneda extranjera, pago a cuenta, puntos y tarjeta de regalo. Comparar inventario, caja, saldo y reportes antes de enviar y después de autorizar. No se ha ejecutado migración ni probado una terminal bancaria o base de producción desde este entorno.

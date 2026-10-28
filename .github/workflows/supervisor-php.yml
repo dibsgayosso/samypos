@@ -75,3 +75,15 @@ jobs:
           php -l application/views/credit_reports/pdf.php
           php -l application/migrations/20261007180000_credit_report_schedule.php
           php tests/credit_reports.php
+      - name: Verify payment-based sale approvals
+        run: |
+          php -l application/models/Sale_approvals.php
+          php -l application/models/Sale.php
+          php -l application/controllers/Sales.php
+          php -l application/controllers/Config.php
+          php -l application/views/config.php
+          php -l application/views/sales/register.php
+          php -l application/views/sale_approvals.php
+          php -l application/views/sale_approval_request.php
+          php -l application/migrations/20261028010000_sale_approvals.php
+          php tests/sale_approvals.php

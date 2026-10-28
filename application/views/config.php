@@ -2043,6 +2043,14 @@ $this->load->helper('update');
 												<label for="hide_suspended_recv_in_reports"><span></span></label>
 											</div>
 										</div>
+<div class="form-group"><label class="col-sm-3 control-label">Ventas que requieren aprobación</label><div class="col-sm-9">
+<p>Selecciona los métodos de pago. Si un pago combinado incluye alguno, toda la venta quedará pendiente hasta que otra cuenta la autorice.</p>
+<?php $selected=json_decode((string)$this->config->item('sale_approval_payment_methods'),TRUE) ?: array();
+$options=array('common_cash'=>lang('common_cash'),'common_check'=>lang('common_check'),'common_giftcard'=>lang('common_giftcard'),'common_debit'=>lang('common_debit'),'common_credit'=>lang('common_credit'),'common_store_account'=>lang('common_store_account'),'common_points'=>lang('common_points'),'common_ebt'=>lang('common_ebt'),'common_ebt_cash'=>lang('common_ebt_cash'));
+foreach ($this->Appconfig->get_additional_payment_types() as $method) $options[$method]=$method;
+foreach ($options as $value=>$label) { ?><label style="display:block"><input type="checkbox" name="sale_approval_payment_methods[]" value="<?php echo html_escape($value); ?>" <?php echo in_array($value,$selected,TRUE) ? 'checked' : ''; ?>> <?php echo html_escape($label); ?></label><?php } ?>
+<p>Sin seleccionar métodos, las ventas conservan su flujo habitual. Asigna el permiso “Autorizar ventas por método de pago” al supervisor.</p>
+</div></div>
 										<?php
 										$track_payment_types = $this->config->item('track_payment_types') ? unserialize($this->config->item('track_payment_types')) : array();
 										?>

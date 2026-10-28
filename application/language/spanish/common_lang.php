@@ -1317,3 +1317,5 @@ $lang['common_authorize_receivings'] = 'Autorizar recepciones de mercancía';
 $lang['common_view_owner_dashboard'] = 'Ver panel del propietario';
 
 $lang['common_view_supervisor_dashboard'] = 'Ver panel del supervisor';
+
+$lang['common_authorize_sales'] = 'Autorizar ventas por método de pago';

@@ -588,6 +588,9 @@ if (!is_on_demo_host() && !$this->config->item('hide_test_mode_home') && !$this-
 </div>
 
 <?php } ?>
+<?php if ($this->Employee->has_module_permission('sales',$this->Employee->get_logged_in_employee_info()->person_id)) { ?>
+<div class="panel panel-piluku"><div class="panel-body"><a href="<?php echo site_url('sales/approval_requests'); ?>"><strong>Aprobación de ventas</strong> · Revisar solicitudes de esta sucursal</a></div></div>
+<?php } ?>
 <div id="my-receiving-requests"><?php $this->load->view('my_receiving_requests'); ?></div>
 <script>
 (function(){var busy=false;setInterval(function(){if(busy||document.hidden)return;busy=true;
