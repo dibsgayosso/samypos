@@ -2048,7 +2048,12 @@ $this->load->helper('update');
 <?php $selected=json_decode((string)$this->config->item('sale_approval_payment_methods'),TRUE) ?: array();
 $options=array('common_cash'=>lang('common_cash'),'common_check'=>lang('common_check'),'common_giftcard'=>lang('common_giftcard'),'common_debit'=>lang('common_debit'),'common_credit'=>lang('common_credit'),'common_store_account'=>lang('common_store_account'),'common_points'=>lang('common_points'),'common_ebt'=>lang('common_ebt'),'common_ebt_cash'=>lang('common_ebt_cash'));
 foreach ($this->Appconfig->get_additional_payment_types() as $method) $options[$method]=$method;
-foreach ($options as $value=>$label) { ?><label style="display:block"><input type="checkbox" name="sale_approval_payment_methods[]" value="<?php echo html_escape($value); ?>" <?php echo in_array($value,$selected,TRUE) ? 'checked' : ''; ?>> <?php echo html_escape($label); ?></label><?php } ?>
+foreach ($options as $value=>$label) { $checkbox_id='sale_approval_method_'.md5($value); ?>
+<div class="sale-approval-payment-option">
+<input type="checkbox" id="<?php echo $checkbox_id; ?>" name="sale_approval_payment_methods[]" value="<?php echo html_escape($value); ?>" <?php echo in_array($value,$selected,TRUE) ? 'checked' : ''; ?>>
+<label for="<?php echo $checkbox_id; ?>"><span></span> <?php echo html_escape($label); ?></label>
+</div>
+<?php } ?>
 <p>Sin seleccionar métodos, las ventas conservan su flujo habitual. Asigna el permiso “Autorizar ventas por método de pago” al supervisor.</p>
 </div></div>
 										<?php
