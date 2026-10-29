@@ -78,9 +78,11 @@ class Sale_approvals extends CI_Model
     public function listing()
     {
         if (!$this->ready()) return array();
-        $this->db->select('id,employee_id,status,sale_time,total,sale_id,rejection_reason')->from('sale_requests')
+        // Permission checks query the same DB builder: finish them before building this SELECT.
+        $can_authorize=$this->can_authorize();
+        $this->db->select('id,employee_id,status,sale_time,total,sale_id,rejection_reason,authorized_at')->from('sale_requests')
             ->where('location_id',$this->Employee->get_logged_in_employee_current_location_id());
-        if (!$this->can_authorize()) $this->db->where('employee_id',$this->Employee->get_logged_in_employee_info()->person_id);
+        if (!$can_authorize) $this->db->where('employee_id',$this->Employee->get_logged_in_employee_info()->person_id);
         return $this->db->order_by("status='pending'",'DESC',FALSE)->order_by('id','DESC')->limit(100)->get()->result_array();
     }
     public function detail($id)

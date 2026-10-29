@@ -71,6 +71,20 @@ public function approval_requests()
     $this->load->model('Sale_approvals');
     $this->load->view('sale_approvals',array('requests'=>$this->Sale_approvals->listing()));
 }
+public function approval_receipt($id)
+{
+    $this->load->model('Sale_approvals');
+    $request=$this->Sale_approvals->detail((int)$id);
+    if (!$request || $request['status']!=='authorized' || (int)$request['sale_id']<=0) {
+        show_error('La venta solo se puede imprimir después de su aprobación.',403); return;
+    }
+    $sale=$this->Sale->get_info((int)$request['sale_id'])->row_array();
+    if (!$sale || $sale['deleted'] || $sale['suspended'] ||
+        (int)$sale['location_id']!==(int)$this->Employee->get_logged_in_employee_current_location_id()) {
+        show_error('No hay una venta aprobada disponible para imprimir en esta sucursal.',403); return;
+    }
+    $this->receipt((int)$request['sale_id']);
+}
 public function approval_request($id)
 {
     $this->load->model('Sale_approvals');
