@@ -37,6 +37,12 @@
 			</ul>
 			
 					<?php foreach ($register_log as $register_log_row) {?>
+						<?php if (empty($can_view_register_difference) && $register_log_row->payment_type == 'common_cash') { ?>
+							<ul class="list-group">
+								<li class="list-group-item"><?php echo lang('common_closing_amount'); ?>: <strong class="pull-right"><?php echo to_currency($register_log_row->close_amount); ?></strong></li>
+							</ul>
+							<?php continue; ?>
+						<?php } ?>
 				<ul class="list-group">
 						<li class="list-group-item"><?php echo (strpos($register_log_row->payment_type,'common_') !== FALSE ? lang($register_log_row->payment_type) : $register_log_row->payment_type).' '.lang('common_open_amount'). ': <strong class="pull-right">'. to_currency($register_log_row->open_amount); ?></strong></li>
 					
@@ -91,7 +97,12 @@
 							<?php 
 								if ($register_log_details != FALSE)
 								{
-									foreach($register_log_details as $row) {?>
+									foreach($register_log_details as $row) {
+										if (empty($can_view_register_difference) && $row['payment_type'] == 'common_cash')
+										{
+											continue;
+										}
+										?>
 									<tr>
 										<td><?php echo date(get_date_format(). ' '.get_time_format(), strtotime($row['date']));?></td>
 										<td><?php echo $row['employee_name'];?></td>
