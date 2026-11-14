@@ -11,12 +11,17 @@ class Supervisor_dashboard extends CI_Model
         }
         return array_values(array_unique($allowed));
     }
+    private static function is_transfer_method($label)
+    {
+        return preg_match('/^(transferencia(?:s)?\b|transf\b|transfer\b|bank transfer\b|spei\b)/iu', trim($label)) === 1;
+    }
+
     public static function transfer_payments($payments)
     {
         $result=array('rows'=>array(),'total'=>0,'operations'=>0);
         foreach ($payments['rows'] as $row) {
             // Preserve configured labels; only clearly identified transfer methods qualify.
-            if (!preg_match('/^(transferencia(?:s)?\b|transfer\b|bank transfer\b|spei\b)/iu',trim($row['label']))) continue;
+            if (!self::is_transfer_method($row['label'])) continue;
             $result['rows'][]=$row;
             $result['total']+=(float)$row['total'];
             $result['operations']+=(int)$row['operations'];
@@ -31,7 +36,7 @@ class Supervisor_dashboard extends CI_Model
             foreach (isset($payments[$sale['sale_id']]) ? $payments[$sale['sale_id']] : array() as $payment) {
                 if ((float)$payment['payment_amount']==0) continue;
                 $label=$payment['payment_type'];
-                if (!preg_match('/^(transferencia(?:s)?\\b|transfer\\b|bank transfer\\b|spei\\b)/iu',trim($label))) continue;
+                if (!self::is_transfer_method($label)) continue;
                 if (!isset($summary[$label])) $summary[$label]=0;
                 $summary[$label]+=(float)$payment['payment_amount'];
             }
